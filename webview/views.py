@@ -1,43 +1,33 @@
+import os
 from collections import defaultdict
 from datetime import date, datetime
-import os
 from django.conf import settings
-# from django.contrib.staticfiles import finders
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.http import urlsafe_base64_decode
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
-# from django.views.decorators.http import require_POST
-from django.contrib.auth.decorators import login_required, permission_required
-from django.contrib.auth.models import User, Permission
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User, Permission, Group
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Sum, Q
 from webview.utils import createAppSite, get_years_list, notEmpty, parseDate, paymentStatusList, read_base64_file, safeDecimal, parseDatetime, save_pdf_file
 
-from django.core.exceptions import PermissionDenied
-from .forms import CategoryForm, ClientForm, GroupForm, PayrollFilterForm, ProductForm, RegisterForm, LoginForm, EmployeeForm, StockForm
-from .tokens import account_activation_token
-from .context import shopping_contents
-from .functions import send_activation_email, send_email_with_attachment
-from .models import AppSite, Category, Client, Country, Payroll, Product, Employee, Sale, SaleItem, Payment, Role, Stock
-from .templatetags.functions_extras import UserIsConnect
-from .decorators import logout_required
 from decimal import Decimal
-# from django.utils.dateparse import parse_datetime
-# from django.contrib.sites.models import Site
 from django.utils import timezone
 from django.template.loader import render_to_string
 from weasyprint import CSS, HTML
-
 from django.contrib.contenttypes.models import ContentType
-
-from django.contrib.auth.models import Group
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-from django import forms
-
 from django.contrib.auth.mixins import LoginRequiredMixin
+
+from .forms import CategoryForm, ClientForm, GroupForm, PayrollFilterForm, ProductForm, RegisterForm, LoginForm, EmployeeForm, StockForm
+from .tokens import account_activation_token
+from .context import shopping_contents
+from .functions import send_email_with_attachment
+from .models import AppSite, Category, Client, Country, Payroll, Product, Employee, Sale, SaleItem, Payment, Role, Stock
+from .decorators import logout_required
 
 PERMISSION_TRANSLATIONS = {
     'Can add category': 'Peut ajouter une catégorie', #add_category
@@ -104,19 +94,14 @@ def has_perm(user, codename):
     # print(permission.codename)
     return user.has_perm(f'webview.{codename}')
 
-
 @login_required 
 def home(request):
     # if request.user.is_superuser:
     #     #raise PermissionDenied
     #     messages.error(request, unAutorizedMsg)
     #     return redirect(reverse('home'))
-        
-    
     return redirect('products')
     # return render(request, 'home/index.html', {})
-
-
 
 class GroupListView(LoginRequiredMixin, ListView):
     model = Group
@@ -143,7 +128,6 @@ class GroupCreateView(LoginRequiredMixin, CreateView):
         """Assign the group to selected users."""
         for user in users:
             user.groups.add(group)
-
 
 class GroupUpdateView(LoginRequiredMixin, UpdateView):
     model = Group
@@ -1100,9 +1084,6 @@ def admin_categories(request, category_id=None):
     categories = Category.objects.filter(deleted=False)
     return render(request, 'admins/categories.html', { 'form': form, 'categories': categories })
 
-
-
-
 @login_required
 def admin_stocks(request, stock_id=None):
     """ Add a stock to the store """
@@ -1198,7 +1179,6 @@ def admin_stocks(request, stock_id=None):
         
     stocks = Stock.objects.filter(deleted=False)
     return render(request, 'admins/stocks.html', { 'form': form, 'stocks': stocks })
-
 
 @login_required
 def admin_sales(request, sale_id=None):
@@ -1744,7 +1724,6 @@ def make_client_sale(request):
 
 @login_required
 def sale_make_rest_payment(request, sale_id):
-    
     create_permission = 'add_payment'
     # update_permission = 'change_payment'
     # delete_permission = 'delete_payment'
@@ -2193,8 +2172,6 @@ def sale_dashboard(request):
     }
 
     return render(request, 'dashboards/sale_dashboard.html', context)
-
-
 
 # @login_required
 # def all_users(request):

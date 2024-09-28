@@ -5,26 +5,16 @@ from django.db import models
 from django.contrib.auth.models import User
 from webview.functions import users_pictures_path, users_pictures_path_thumb, products_pictures_path
 from django.core.files.storage import default_storage as storage
-# from django_countries.fields import CountryField
-# from django.conf import settings
 from decimal import Decimal
 from webview.utils import notEmpty
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.contrib.sites.models import Site
 
-from django.db.models import Sum, Q
+from django.db.models import Q
 
 default_user_icon="default-user-icon.png"
 no_image_available="no-image-available.png"
-
-
-class MakeSale(models.Model):
-    id = models.PositiveIntegerField(primary_key=True, null=False, blank=False)
-    
-
-
-
 
 class AppSite(models.Model):
     id = models.PositiveIntegerField(primary_key=True, null=False, blank=False)
