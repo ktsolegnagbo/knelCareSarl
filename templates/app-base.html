@@ -1,0 +1,189 @@
+{% load static %}
+{% load i18n %}
+{% load pwa %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- {#% progressive_web_app_meta %#} -->
+    <meta charset="UTF-8">
+    <meta name="description" content="" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}KnelCare{% endblock %}</title>
+
+    <link rel="icon" type="image/x-icon" href="{{ MEDIA_URL }}logo.png" />
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    
+    <!-- <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> -->
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+    <!-- {#% include 'fonts/googleapis.css' %#} -->
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- {#% include 'fonts/cdnjs.cloudflare.min.css' %#} -->
+
+    
+    
+    <!-- <link href="https://cdn.datatables.net/buttons/2.2.3/css/buttons.dataTables.min.css"  rel="stylesheet" type="text/css">
+    <link href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css"  rel="stylesheet" type="text/css"> -->
+
+
+    <link rel="stylesheet" href="{% static 'fonts/boxicons.css' %}">
+    <link rel="stylesheet" href="{% static 'css/core.css' %}">
+    <link rel="stylesheet" href="{% static 'css/theme-default.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/libs/apex-charts/apex-charts.css' %}">
+    <link rel="stylesheet" href="{% static 'css/demo.css' %}">
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <!-- <link rel="stylesheet" href="{#% static 'librairies/Parsley/parsley.css' %#}"> -->
+
+    <script src="{% static 'vendor/js/helpers.js' %}"></script>
+    <script src="{% static 'js/config.js' %}"></script>
+</head>
+
+<body>
+
+    {% block extra_css %}{% endblock %}
+
+    <div class="layout-wrapper layout-content-navbar">
+        <div class="layout-container">
+            {% include 'layouts/left-side-nav.html' %}
+            <div class="layout-page">
+                {% include 'layouts/top-nav.html' %}
+                <div class="content-wrapper">
+                    <div class="container-fluid flex-grow-1 container-p-y">
+                        <!-- <div class="container-xxl flex-grow-1 container-p-y"> -->
+
+                        <!-- {#% include 'layouts/_messages.html' %#} -->
+                       
+                        {% block content %}{% endblock %}
+
+                        {% block modalsBlock %}{% endblock %}
+
+                        <div class="modal fade" id="logoutModal" data-bs-backdrop="static" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="logoutModalTitle">Deconnexion</h5>
+                                        <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
+                                    </div>
+                                    <div class="modal-body">
+                                        <span class="form-label">Êtes vous sûr de vouloir vous déconnecter?</span>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                            Annuler
+                                        </button>
+                                        <a href="{% url 'logout' %}" class="btn btn-primary">Oui, me déconnecter</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% include 'layouts/footer.html' %}
+                    <div class="content-backdrop fade"></div>
+                </div>
+            </div>
+        </div>
+        <div class="layout-overlay layout-menu-toggle"></div>
+    </div>
+
+    {% block superActionBlock %}
+    <!-- <div class="super-app-action">
+        <a href="https://themeselection.com/products/sneat-bootstrap-html-admin-template/" target="_blank"
+            class="btn btn-danger btn-super-app-action">Upgrade to Pro</a>
+    </div> -->
+    {% endblock %}
+
+    <script src="{% static 'vendor/js/helpers.js' %}"></script>
+    <script src="{% static 'vendor/libs/jquery/jquery.js' %}"></script>
+    <script src="{% static 'vendor/libs/popper/popper.js' %}"></script>
+    <script src="{% static 'vendor/js/bootstrap.js' %}"></script>
+    <script src="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.js' %}"></script>
+    <script src="{% static 'vendor/js/menu.js' %}"></script>
+    <script src="{% static 'vendor/libs/apex-charts/apexcharts.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+    <!-- <script src="{#% static 'js/dashboards-analytics.js' %#}"></script> -->
+
+
+{% include 'datatable/tableToExcel.html' %}
+<!-- {#% include 'datatable/jspdf.html' %#}
+{#% include 'datatable/jspdf.autotable.html' %#} -->
+
+  <script>
+      function ExportTableData(tableId, filename='data',sheetname=null) {
+          TableToExcel.convert(document.getElementById(tableId), {
+              name: filename+".xlsx",
+              sheet: {
+              name: sheetname ?? filename
+              }
+          });
+      }
+  </script>
+
+  <!-- <script>
+      // function generatePdf(tableId) {
+      //   const { jsPDF } = window.jspdf;
+      //   const doc = new jsPDF();
+
+      //   // Get table data
+      //   const table = document.getElementById(tableId);
+      //   const head = [];
+      //   const body = [];
+
+      //   // Extract valid rows (tr), headers (th), and cells (td)
+      //   const rows = table.querySelectorAll('tr');
+
+      //   rows.forEach((row, rowIndex) => {
+      //     const cells = Array.from(row.children).filter(el => el.tagName === 'TH' || el.tagName === 'TD');
+      //     const cellContent = cells.map(cell => cell.textContent.trim());
+
+      //     if (rowIndex === 0) {
+      //       // This is the header row (th)
+      //       head.push(cellContent);
+      //     } else if (cellContent.length === 3) {
+      //       // Valid rows should have 3 cells, add them to the body
+      //       body.push(cellContent);
+      //     }
+      //   });
+
+      //   // Generate PDF table using jsPDF autoTable
+      //   doc.autoTable({
+      //     head,
+      //     body,
+      //     theme: 'striped',
+      //   });
+
+      //   // Save the PDF
+      //   doc.save('table.pdf');
+      // }
+    </script> -->
+
+  <script>
+      if ('serviceWorker' in navigator) {
+          window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/serviceworker.js').then(function(registration) {
+              console.log('Service Worker registered with scope:', registration.scope);
+              }, function(err) {
+              console.log('Service Worker registration failed:', err);
+              });
+          });
+      }
+  </script>
+
+  <script src="{% static 'flashy.js' %}"></script>
+    
+  {% if messages %}
+      {% for message in messages %}
+      <script>
+          flashy("{{ message }}", "{{ message.tags }}");
+      </script>
+      {% endfor %}
+  {% endif %}
+
+  {% block postloadjs %}{% endblock %}
+</body>
+
+</html>

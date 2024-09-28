@@ -1,0 +1,109 @@
+{% extends 'app-base.html' %}
+{% load permissions_tags %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}KnelCare-Auth{% endblock %}
+
+{% block content %}
+   {% if  request.user|can_view_sale and request.user|is_administrator %}
+      <div class="card">
+         <div style="height: 50px; padding: 10px;" class="card-header">
+            {% if sales|length > 0 %}
+               <button style="background:orange; padding: 5px;font-size:14px" class="btn btn-warning"  id="exportBtn1" onclick="ExportTableData('dataTable', 'dashboard-vente');">Télécharger en Excel</button>
+            {% endif %}
+            <h4 style="float: right;">Tableau de bord des ventes</h4>
+         </div>
+
+         <div class="table-responsive text-nowrap">
+            <table class="table" id="dataTable">
+               <thead data-exclude="true" class="table-dark">
+                  <tr data-exclude="true">
+                     <th data-exclude="true" colspan="14">
+                        <form action="{% url 'sale_dashboard' %}" method="POST">
+                           {% csrf_token %}
+                           <div style="width: 110px!important;" class="input-group input-group-merge">
+                              <select style="font-weight: bold; margin-right: 2px;" name="year" id="year" class="form-select" onchange="this.form.submit()">
+                                 {% for y in years %}
+                                    <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+                                 {% endfor %}
+                              </select>
+                              <!-- <select style="font-weight: bold; margin-right: 2px; width: 120px;" name="status" id="status" class="form-select">
+                                 <option value="">Tout</option>
+                                 <option value="actif" {% if status == 'active' %}selected{% endif %}>Employés Actifs</option>
+                                 <option value="inactif" {% if status == 'inactif' %}selected{% endif %}>Employés Inactifs</option>
+                              </select> -->
+                              
+                              <!-- <button on class="input-group-text">
+                                 <i class="bx bx-search"></i>
+                              </button> -->
+                           </div>
+                        </form>
+                     </th>
+                  </tr>
+               </thead>
+
+               {% if sales|length > 0 %}
+                  <thead class="table-dark">
+                     <tr style="display: none;">
+                        <th colspan="14">Tableau de bord des Ventes</th>
+                     </tr>
+                     <tr>
+                        <th style="color: white;">Entreprise</th>
+                        <th style="color: white;">Employee</th>
+                        <th style="color: white;">Janvier</th>
+                        <th style="color: white;">Février</th>
+                        <th style="color: white;">Mars</th>
+                        <th style="color: white;">Avril</th>
+                        <th style="color: white;">Mai</th>
+                        <th style="color: white;">Juin</th>
+                        <th style="color: white;">Juillet</th>
+                        <th style="color: white;">Août</th>
+                        <th style="color: white;">Septembre</th>
+                        <th style="color: white;">Octobre</th>
+                        <th style="color: white;">Novembre</th>
+                        <th style="color: white;">Décembre</th>
+                     </tr>
+                  </thead>
+
+                  <tbody class="table-border-bottom-0">
+                     {% for sale in sales %}
+                        <tr>
+                           <td>{{ sale.client.company }}</td>
+                           <td>{{ sale.client.full_name }}</td>
+                           <td>{{ sale.jan|floatformat:0|separate_millier }}</td>
+                           <td>{{ sale.fev|floatformat:0|separate_millier }}</td>
+                           <td>{{ sale.mar|floatformat:0|separate_millier }}</td>
+                           <td>{{ sale.avr|floatformat:0|separate_millier }}</td>
+                           <td>{{ sale.mai|floatformat:0|separate_millier }}</td>
+                           <td>{{ sale.jui|floatformat:0|separate_millier }}</td>
+                           <td>{{ sale.jul|floatformat:0|separate_millier }}</td>
+                           <td>{{ sale.aou|floatformat:0|separate_millier }}</td>
+                           <td>{{ sale.sep|floatformat:0|separate_millier }}</td>
+                           <td>{{ sale.oct|floatformat:0|separate_millier }}</td>
+                           <td>{{ sale.nov|floatformat:0|separate_millier }}</td>
+                           <td>{{ sale.dec|floatformat:0|separate_millier }}</td>
+                        </tr>
+                     {% endfor %}
+                  </tbody>
+               {% else %}
+                  <tr data-exclude="true">
+                     <th data-exclude="true" colspan="14" style="color:brown; font-weight: bold;">Pas de données disponible pour ce filter</th>
+                  </tr>
+               {% endif %}
+            </table>
+         </div>
+      </div>
+      <div class="overlay"></div>
+   {% endif %}
+{% endblock %} 
+
+
+{% block modalsBlock %}
+{% endblock %}
+
+{% block postloadjs %} 
+{{ block.super }}
+<script>
+</script>
+{% endblock %}

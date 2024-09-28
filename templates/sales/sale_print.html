@@ -1,0 +1,387 @@
+{% load static %}
+{% load custom_filters %}
+
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Facture #{{ sale.id }}</title>
+    <style>
+        /* Apply to the entire body and html */
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            /* Ensure the body takes at least the full viewport height */
+        }
+
+        /* The content area should expand to push footer to the bottom if content is short */
+        .content {
+            /* padding-top: 35px; */
+            /* margin-top: 100px; */
+            flex-grow: 1;
+        }
+
+        .header {
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+        }
+
+        .sub-header {
+            /* border-bottom: 2px solid #ddd; */
+            margin-bottom: 10px;
+            /* padding-bottom: 5px; */
+        }
+
+        .company-info,
+        .client-info,
+        .sub-header div,
+        .sub-header h4 {
+            display: inline-block;
+            width: 48%;
+            vertical-align: top;
+        }
+
+        .company-info,
+        .sub-header div {
+            text-align: left;
+        }
+
+        .client-info,
+        .sub-header h4 {
+            text-align: right;
+        }
+
+        h3 {
+            /* font-size: 1.5em; */
+            margin-bottom: 5px;
+            color: #0056b3;
+        }
+
+        p {
+            font-size: 0.9em;
+            margin: 5px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            /* margin-top: 20px; */
+            font-size: 0.9em;
+        }
+
+        .page-items th,
+        .page-items td {
+            border: 1px solid #ddd;
+            text-align: left;
+            padding: 10px;
+            align-items: center;
+        }
+
+        .page-items th {
+            background-color: #f4f4f4;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .page-items td {
+            background-color: #fff;
+        }
+
+        thead {
+            background-color: #010541;
+        }
+
+        thead th {
+            padding: 8px !important;
+            color: white;
+            /* text-align: center; */
+            /* font-size: 15px; */
+        }
+
+        .total {
+            width: 100%;
+            /* font-size: 14px !important; */
+            margin-top: 10px;
+        }
+
+        .total tr td {
+            width: 100%;
+        }
+
+        .total .amount {
+            display: flex;
+            align-items: center;
+            text-align: right;
+        }
+
+        .total .data-value {
+            border: none;
+            padding: 5px;
+            text-align: left;
+            background-color: #f4f4f4;
+            width: 35%;
+        }
+
+        .total .data-label {
+            border: none;
+            padding: 5px;
+            text-align: right;
+            width: 65%;
+        }
+
+        /* Ensure no page breaks within tables */
+        table,
+        tr,
+        td,
+        th {
+            page-break-inside: avoid;
+        }
+
+        /* Footer without fixed positioning */
+        footer {
+            margin-top: auto;
+            border-top: 1px solid #ddd;
+            page-break-after: always;
+            padding-top: 5px;
+            text-align: center;
+            font-size: 0.85em;
+            color: #777;
+        }
+
+        /* Footer without fixed positioning */
+        .footer {
+            margin-top: 40px;
+            /* border-top: 1px solid #ddd; */
+            page-break-after: always;
+            /* padding-top: 5px; */
+            text-align: center;
+            font-size: 0.80em;
+            color: #777;
+        }
+
+        .company-logo {
+            width: 60px;
+            border-radius: 50%;
+            border: 1px dashed gray;
+            padding: 0;
+            margin: 0px 10px 0px 0px;
+        }
+
+        /* @media print {
+            header, footer {
+                page-break-after: always;
+            }
+            .no-print {
+                display: none;
+            }
+        } */
+    </style>
+</head>
+
+<body>
+    <!-- Content wrapper will take up available space -->
+    <div class="content">
+
+        <div class="header">
+            <div class="company-info">
+                <div style="display: flex; margin-bottom: 10px;">
+                    <div style="height: 50px;">
+                        <img src="data:image/png;base64,{{ base64_string }}" alt="KnelCare" class="company-logo" />
+
+                    </div>
+                    <h2>{{ app_site.name }} </h2>
+                </div>
+                {% if app_site.address %}
+                    <!-- <p style="margin: 0px; padding: 0px; height: 15px; overflow: hidden;"> -->
+                    <p>
+                        {{ app_site.address }}
+                    </p>
+                {% endif %}
+                <p>Email: {{ app_site.email }}</p>
+                <p>Téléphone: {{ app_site.phone_number }} {% if app_site.phone_number_other %} | {{ app_site.phone_number_other }} {% endif %}</p>
+            </div>
+
+            <div class="client-info">
+                <h2 style="margin-bottom: 5px;">Client</h2>
+                {% if sale.client and sale.client.company %}
+                    <p>{{ sale.client.company }}</p>
+                {% endif %}
+                <p>{{ sale.client.full_name }}</p>
+                <p>Email: {{ sale.client.email }}</p>
+                <p>Téléphone: {{ sale.client.phone_number }}</p>
+                {% if sale.client and sale.client.address %}
+                    <p style="margin: 0px; padding: 0px; height: 15px; overflow: hidden; float: right;">
+                        Adresse: {{ sale.client.address }}
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="sub-header">
+            <div>
+                <h3>{{ sale_name }} #{{ sale.id }}</h3>
+                <p>Date: <strong>{{ sale.date }}</strong></p>
+            </div>
+            <!-- <h4>Statut: <strong>{#{ sale.status.name }#}</strong></h4> -->
+        </div>
+
+        {% for page_items in items_pages %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Produit</th>
+                    <th>Quantité</th>
+                    <th>PU ({{ price_unit }})</th>
+                    <th>Total ({{ price_unit }})</th>
+                </tr>
+            </thead>
+            <tbody class="page-items">
+                {% for item in page_items %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.price|floatformat:0|separate_millier }}</td>
+                    <td>{{ item.amount|floatformat:0|separate_millier }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+
+            {% if forloop.counter == second_last_index %}
+            <tbody class="total">
+                <tr>
+                    <td style="padding: 10px;" colspan="4"></td>
+                </tr>
+                {% if sale.discount and sale.discount > 0 %}
+                <tr>
+                    <td colspan="4">
+                        <div class="amount">
+                            <div class="data-label">
+                                Remise:
+                            </div>
+                            <div class="data-value">
+                                {{ sale.discount|floatformat:0|separate_millier }} {{ price_unit }}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                {% if sale.tax_amount and sale.tax_amount > 0 %}
+                <tr>
+                    <td colspan="4">
+                        <div class="amount">
+                            <div class="data-label">
+                                Taxe:
+                            </div>
+                            <div class="data-value">
+                                {{ sale.tax_amount|floatformat:0|separate_millier }} {{ price_unit }}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                {% if sale.ttc_amount > sale.ht_amount %}
+                <tr>
+                    <td colspan="4">
+                        <div class="amount">
+                            <div class="data-label">
+                                Montant HT:
+                            </div>
+                            <div class="data-value">
+                                {{ sale.ht_amount|floatformat:0|separate_millier }} {{ price_unit }}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4">
+                        <div class="amount">
+                            <div class="data-label">
+                                Montant Total TTC:
+                            </div>
+                            <div class="data-value ">
+                                <strong>{{ sale.ttc_amount|floatformat:0|separate_millier }}</strong> {{ price_unit }}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4">
+                        <div class="amount">
+                            <span class="data-label">
+                                Montant Total:
+                            </span>
+                            <span class="data-value">
+                                <strong>{{ sale.ttc_amount|floatformat:0|separate_millier }}</strong> {{ price_unit }}
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+
+                {% if paidAmount < sale.ttc_amount %}
+                <tr><td colspan="4" style="height: 5px;"></td></tr>
+
+
+                <tr>
+                    <td  style="color: #010541; font-size: 14px;" colspan="4">
+                        <div class="amount">
+                            <div class="data-label">
+                                Vous avez payé:
+                            </div>
+                            <div class="data-value ">
+                                <strong>{{ paidAmount|floatformat:0|separate_millier }}</strong> {{ price_unit }}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td  style="color: #010541; font-size: 14px;" colspan="4">
+                        <div class="amount">
+                            <div class="data-label">
+                                Il vous reste à payer:
+                            </div>
+                            <div class="data-value ">
+                                <strong>{{ unPaidAmount|floatformat:0|separate_millier }}</strong> {{ price_unit }}
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+            {% endif %}
+
+        </table>
+
+        <!-- <div class="footer">
+            <p>Merci pour votre confiance à {{ app_site.domain }}.</p>
+            <p>{{ app_site.name }} | {{ app_site.email }} | {{ app_site.phone_number }} {% if app_site.phone_number_other %} | {{ app_site.phone_number_other }} {% endif %}</p>
+            {% if app_site.address %} {{ app_site.address }}{% endif %}
+        </div> -->
+
+        {% endfor %}
+
+    </div>
+
+    <footer>
+        <p>Merci pour votre confiance à {{ app_site.name }}.</p>
+        <p>{{ app_site.domain }} | {{ app_site.email }} | {{ app_site.phone_number }} {% if app_site.phone_number_other %} | {{ app_site.phone_number_other }} {% endif %}</p>
+        <p>{% if app_site.address %} {{ app_site.address }}{% endif %}</p>
+    </footer>
+
+</body>
+
+</html>

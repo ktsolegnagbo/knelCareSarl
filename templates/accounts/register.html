@@ -1,0 +1,118 @@
+{% extends 'auth-base.html' %}
+{% load static %}
+{% load i18n %}
+{% load permissions_tags %}
+
+{% block title %}Register Page{% endblock %}
+
+{% block content %}
+
+
+{% if  request.user|can_create_employee %}
+    <form class="mb-3" action="{% url 'register' %}" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="mb-3">
+            <label for="last_name" class="form-label">Nom de famille *</label>
+            <input type="text" class="form-control" id="last_name" value="" name="last_name" placeholder="Entrer votre nom" autofocus />
+            {% if user_form.last_name.errors %}
+                <div class="error">{{ user_form.last_name.errors.0 }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            <label for="first_name" class="form-label">Prénoms *</label>
+            <input type="text" class="form-control" id="first_name" value="" name="first_name" placeholder="Entrer votre prénoms" autofocus />
+            {% if user_form.first_name.errors %}
+                <div class="error">{{ user_form.first_name.errors.0 }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            <label for="username" class="form-label">Nom d'utilisateur *</label>
+            <input type="text" class="form-control" id="username" value="" name="username" placeholder="Entrer le nom d'utilisateur" autofocus />
+            {% if user_form.username.errors %}
+                <div class="error">{{ user_form.username.errors.0 }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            <label for="email" class="form-label">Email *</label>
+            <input type="text" class="form-control" id="email" value="" name="email" placeholder="Entrer l'addresse email" />
+            {% if user_form.email.errors %}
+                <div class="error">{{ user_form.email.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3 form-password-toggle">
+            <label class="form-label" for="password">Mot de passe *</label>
+            <div class="input-group input-group-merge">
+                <input type="password" id="password" class="form-control" name="password" placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;" aria-describedby="password" />
+                <span class="input-group-text cursor-pointer"><i class="bx bx-hide"></i></span>
+            </div>
+            {% if user_form.password.errors %}
+                <div class="error">{{ user_form.password.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        <div class="mb-3 form-password-toggle">
+            <label class="form-label" for="password_confirm">Confirmer le mot de passe *</label>
+            <div class="input-group input-group-merge">
+                <input type="password" id="password_confirm" class="form-control" name="password_confirm" placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;" aria-describedby="password" />
+                <span class="input-group-text cursor-pointer"><i class="bx bx-hide"></i></span>
+            </div>
+            <!-- {% if user_form.password.errors %}
+                <div class="error">{{ user_form.password.errors.0 }}</div>
+            {% endif %} -->
+
+            <!-- {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %} -->
+        </div>
+
+
+        <div class="mb-3">
+            <label class="form-label" for="sale-client">Pays d'action <b class="field-required">*</b></label>
+            <select name="sale_client" id="sale-client" class="form-select">
+                <option value=""></option>
+                {% for country in countries %}
+                <option value="{{ country.id }}">{{ country.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="employee_pic" class="form-label">Image de profile</label> 
+            <input id="employee_pic" type="file" name="employee_pic" class="form-control">
+            {% if employee_form.employee_pic.errors %}
+                <div class="error">{{ employee_form.employee_pic.errors }}</div>
+            {% endif %}
+        </div>  
+
+
+        <div class="mb-3">
+            <div class="form-check">
+                <input id="agree_privacy_policy" class="form-check-input" type="checkbox" name="agree_privacy_policy" />
+                <label class="form-check-label" for="agree_privacy_policy">
+                    J'accepte <a href="javascript:void(0);">la politique de confidentialité</a>
+                </label>
+            </div>
+        </div>
+        <button class="btn btn-primary d-grid w-100">Enrégistrer</button>
+    </form>
+    <hr>
+{% endif %}
+<p class="text-center">
+    <a href="javascript:void(0);" onclick="window.history.back();">
+        <span>Retour à la page précédente</span>
+    </a>
+</p>
+<!-- <p class="text-center">
+    <span>Vous avez deja un compte?</span>
+    <a href="{% url 'login' %}">
+        <span>Connecter vous</span>
+    </a>
+</p> -->
+{% endblock %}

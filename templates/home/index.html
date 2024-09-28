@@ -1,0 +1,107 @@
+{% load static %}
+{% load i18n %}
+{% load pwa %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate PDF Offline</title>
+    <script src="{% static 'jspdf.min.js' %}"></script>
+</head>
+
+<body>
+    <h1>Generate PDF with Dynamic Data</h1>
+    <button id="generate-pdf">Generate PDF</button>
+
+    <script>
+        // Function to generate PDF
+        function generatePDF(userData) {
+            var doc = new jsPDF();
+            doc.text(20, 20, 'User Data PDF');
+            doc.text(20, 30, 'Name: ' + userData.name);
+            doc.text(20, 40, 'Email: ' + userData.email);
+            doc.save('user_data.pdf');
+        }
+
+        // Retrieve Data from IndexedDB
+        document.getElementById('generate-pdf').addEventListener('click', function () {
+            let dbPromise = indexedDB.open('offlineData', 1);
+
+            dbPromise.onsuccess = function (event) {
+                let db = event.target.result;
+                let transaction = db.transaction(['userData'], 'readonly');
+                let store = transaction.objectStore('userData');
+                let request = store.get(1);
+
+                request.onsuccess = function (event) {
+                    let userData = event.target.result;
+                    if (userData) {
+                        generatePDF(userData);
+                    } else {
+                        alert('No data found!');
+                    }
+                };
+            };
+        });
+    </script>
+
+    <script>
+        // Open IndexedDB
+        const dbPromise = indexedDB.open('offlineData', 1);
+
+        // Create object store
+        dbPromise.onupgradeneeded = function (event) {
+            let db = event.target.result;
+            db.createObjectStore('userData', { keyPath: 'id' });
+        };
+
+        // Save data to IndexedDB
+        function saveDataOffline(data) {
+            dbPromise.onsuccess = function (event) {
+                let db = event.target.result;
+                let transaction = db.transaction(['userData'], 'readwrite');
+                let store = transaction.objectStore('userData');
+                store.put(data);
+            };
+        }
+
+        // Example data to save
+        let userData = {
+            id: 1,
+            name: 'John Doe',
+            email: 'john@example.com'
+        };
+        saveDataOffline(userData);
+
+    </script>
+
+    <script>
+        self.addEventListener('sync', function (event) {
+            if (event.tag === 'sync-user-data') {
+                event.waitUntil(syncUserData());
+            }
+        });
+
+        function syncUserData() {
+            return dbPromise.then(db => {
+                let tx = db.transaction('userData', 'readonly');
+                let store = tx.objectStore('userData');
+                return store.getAll().then(userData => {
+                    return fetch('/sync-data/', {
+                        method: 'POST',
+                        body: JSON.stringify(userData),
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                });
+            });
+        }
+
+    </script>
+</body>
+
+</html>

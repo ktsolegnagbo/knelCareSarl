@@ -1,0 +1,23 @@
+{% extends 'app-base.html' %}
+{% load permissions_tags %}
+{% load custom_filters %}
+{% load static %}
+
+{% block title %}KnelCare-Auth{% endblock %}
+
+
+{% block content %}
+  <!-- {#% if  request.user|can_view_group %#} -->
+    <h1>Groups</h1>
+    <a href="{% url 'group-create' %}">Create New Group</a>
+    <ul>
+      {% for group in groups %}
+      <li>
+        {{ group.name }}
+        <a href="{% url 'group-update' group.pk %}">Edit</a>
+        <a href="{% url 'group-delete' group.pk %}">Delete</a>
+      </li>
+      {% endfor %}
+    </ul>
+  <!-- {#% endif %#} -->
+{% endblock %}

@@ -1,0 +1,266 @@
+{% extends 'app-base.html' %}
+{% load permissions_tags %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}KnelCare-Auth{% endblock %}
+
+{% block content %}
+{% if request.user|can_view_product %}
+   <div class="row mb-5">
+         <div class="mb-3">
+            <form method="GET" action="{% url 'products' %}">
+               {% csrf_token %}
+               <div style="margin: 0px; padding: 0px;" class="navbar-nav align-items-center">
+                  <div style="margin: px; padding: 0px;" class="nav-item d-flex align-items-center">
+                     <select style="font-weight: bold; margin-right: 2px;width: 200px;" name="category" id="category" class="form-select">
+                        <option value="">Toutes les catégories</option>
+                        {% for category in categories %}
+                           <option value="{{ category.id }}" {% if selected_category_id == category.id %}selected{% endif %}>{{ category.name }}</option>
+                        {% endfor %}
+                     </select>
+                     <input name="search" value="{{ search }}" style="width: 300px; margin: 0px;" type="text" class="form-control border-1 shadow-none" placeholder="Search..." aria-label="Search..." />
+                     <button style="width: 50px; margin: 0px 0px 0px 5px;" type="submit" class="form-control border-1" ><i class="bx bx-search fs-4 lh-0"></i></button>
+                  </div>
+               </div>
+         </form>
+         </div>
+      {% if products|length > 0 %}
+
+         {% for product in products %}
+         <div class="col-md-3 col-lg-2 col-6 mb-2">
+            <div class="card h-100">
+               <div class="card-body">
+                  <h5 style="padding: 0px; margin: 0px 0px 5px 0px;" class="card-title">{{ product.name }}</h5>
+                  {% if product.price %}
+                  <h6 style="padding: 0px; margin: 0px 0px 10px 0px;" class="lead font-weight-bold">{{ product.price|floatformat:0|separate_millier }} <small style="font-size: 10px;">{{ price_unit }}</small></h6>
+                  {% endif %}
+
+                  <!-- {#% if request.user.is_superuser %#}
+                  <div style="margin: 10px 0px 15px 0px;">
+                     <small class="ml-3">
+                        <a class="text-dark" href="{#% url 'edit_product' product.id %#}"><i class="fas fa-edit"></i> Edit</a> |
+                        <a class="text-dark" href="{#% url 'delete_product' product.id %#}"><i
+                              class="fas fa-times-circle"></i>Delete</a>
+                     </small>
+                  </div>
+                  {#% endif %#} -->
+                  {% if  request.user|can_create_sale %}
+                     <div>
+                        <button style="padding: 1px 2.5px 1px 2.5px;font-size: 12px;" type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
+                           data-bs-target="#addProductQuantityModal" data-id="{{ product.id }}" data-name="{{ product.name }}"
+                           data-price="{{ product.price|floatformat:0 }}"
+                           data-quantity="{{ request.session.shopping|get_data_item:product.id|default:1 }}"
+                           data-image-url="{{ product.imageUrl }}" data-image-url="{{ product.user }}"
+                           data-price-unit="{{ price_unit }}" data-tax-rate="{{ tax_rate }}" data-tax-rate-brut="{{ tax_rate_brut }}">
+                           <b>Selectionner</b>
+                        </button>
+                     </div>
+                  {% endif %}
+               </div>
+
+               <div style="padding: 5px;">
+                  <img style="border-radius: 5px;" src="{{ product.imageUrl }}" class="card-img-top" alt="{{ product.name }}">
+               </div>
+            </div>
+         </div>
+         {% endfor %}
+      {% else %}
+      <h3 style="text-align: center; color: brown;" class="mt-5">Pas d'article trouvé</h3>
+         
+      <!-- <h3 style="text-align: center; color: brown;" class="mt-5">Veuillez contacter votre administrateur!</h3> -->
+      {% endif %}
+   </div>
+{% endif %}
+{% endblock %}
+
+
+
+{% block modalsBlock %}
+
+<div class="modal fade" id="addProductQuantityModal" data-bs-backdrop="static" tabindex="-1">
+   <div class="modal-dialog modal-sm">
+      <form method="POST" action="" class="form modal-content" enctype="multipart/form-data">
+         {% csrf_token %}
+
+         <input type="hidden" name="search" value="{{ search }}">
+
+         <div class="modal-header">
+            <h6 class="modal-title" id="addProductQuantityModalTitle">Quantité à vendre au client</h6>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+         </div>
+         <div class="modal-body">
+            <!-- Product details go here -->
+
+            <input id="selected-product-price-hidden" type="hidden">
+            <input id="selected-product-unit-price-hidden" type="hidden">
+            <input id="selected-product-tax-rate-hidden" type="hidden">
+            <input id="selected-product-tax-rate-brut-hidden" type="hidden">
+               
+            <div style="text-align: center; margin-left: 5px;" class="mb-3">
+               <img id="selected-product-picture" style="width: 50px; margin-bottom: 5px; display: none;" src="" class="card-img-top img-fluid" alt="" />
+               <div>
+                  <h5 id="selected-product-name" class="card-title mt-0"></h5>
+                  <h6 style="color: blue;" id="selected-product-price" class="card-title mt-0"></h6>
+               </div>
+               <hr>
+            </div>
+
+            <!-- <div style="margin-left: 5px; color: brown;" class="mb-4">
+               <div class="form-check" style="display: flex; align-items: center;">
+                   <input style="zoom: 1.5;" id="apply-tax" class="form-check-input" type="checkbox" name="apply_tax" />
+                   <label style="margin-left: 10px; text-align: left; font-size: large;" class="form-check-label" for="apply-tax">Appliquer la tax (TVA)</label>
+               </div>
+           </div> -->
+
+            <div class="form-row">
+               <div class="col-12">
+                  <p class="mt-3"><strong>Saisir la quantité demandée:</strong></p>
+                  <div class="form-group">
+                     <div class="input-group">
+
+                        <div class="input-group-prepend">
+                           <button type="button" class="decrement-qty btn btn-black rounded-0" id="decrement-qty">
+                              <span><i class="fas fa-minus fa-sm"></i></span>
+                           </button>
+                        </div>
+
+                        <input id="selected-product-quantity" style="text-align: center;" class="form-control qty_input" type="text" inputmode="numeric" pattern="[0-9]*" name="quantity" value="1" min="1" max="99">
+                        
+                        <div class="input-group-append">
+                           <button type="button" class="increment-qty btn btn-black rounded-0" id="increment-qty">
+                              <span><i class="fas fa-plus fa-sm"></i></span>
+                           </button>
+                        </div>
+
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            <hr>
+            <h6 id="selected-product-ht-amount" class="card-title mt-0"></h6>
+            <!-- <p id="selected-product-tax-amount" class="card-title mt-0"></p> -->
+            <!-- <p id="selected-product-ttc-amount" class="card-title mt-0"></p> -->
+            <!-- <hr> -->
+            <input type="hidden" name="redirect_url" value="{{ request.path }}" />
+         </div>
+         <div class="modal-footer">
+            <button style="padding: 1px 5px 1px 5px;" type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button style="padding: 1px 5px 1px 5px;" type="submit" class="btn btn-primary">Valider la quantité</button>
+         </div>
+      </form>
+   </div>
+</div>
+
+{% endblock %}
+
+{% block postloadjs %}
+
+<script>
+
+   document.addEventListener('DOMContentLoaded', function () {
+      const addProductModal = document.getElementById('addProductQuantityModal');
+
+      addProductModal.addEventListener('show.bs.modal', function (event) {
+         const button = event.relatedTarget; // Button that triggered the modal
+
+         const productId = button.getAttribute('data-id');
+         const productName = button.getAttribute('data-name');
+         const productQuantity = button.getAttribute('data-quantity');
+         const productPrice = button.getAttribute('data-price');
+         const productImageUrl = button.getAttribute('data-image-url');
+         const productPriceUnit = button.getAttribute('data-price-unit');
+         const productTaxRate = button.getAttribute('data-tax-rate');
+         const productTaxRateBrut = button.getAttribute('data-tax-rate-brut');
+
+
+         const pictureObj = document.getElementById('selected-product-picture');
+         const nameObj = document.getElementById('selected-product-name');
+         const quantityObj = document.getElementById('selected-product-quantity');
+         const priceObj = document.getElementById('selected-product-price');
+
+         const priceHiddenObj = document.getElementById('selected-product-price-hidden');
+         const unitPriceHiddenObj = document.getElementById('selected-product-unit-price-hidden');
+         const taxRateHiddenObj = document.getElementById('selected-product-tax-rate-hidden');
+         const taxRateBrutHiddenObj = document.getElementById('selected-product-tax-rate-brut-hidden');
+
+         // const amountObj = document.getElementById('selected-product-amount');
+
+         pictureObj.setAttribute('src', productImageUrl);
+         pictureObj.setAttribute('alt', productName);
+         nameObj.textContent = productName;
+         priceObj.innerHTML = `<b>${parseFloat(productPrice).toFixed(0)}</b> ${productPriceUnit}`;
+         quantityObj.value = productQuantity;
+
+         priceHiddenObj.value = productPrice;
+         unitPriceHiddenObj.value = productPriceUnit;
+         taxRateHiddenObj.value = productTaxRate;
+         taxRateBrutHiddenObj.value = productTaxRateBrut;
+
+         const modalForm = document.querySelector('#addProductQuantityModal form');
+         const actionUrl = `{% url 'add_to_shopping' 0 %}`.replace('/0/', `/${productId}/`);
+         modalForm.setAttribute('action', actionUrl);
+
+         handleEnableDisable();
+      });
+   });
+
+   // Disable +/- buttons outside 1-99 range
+   function handleEnableDisable() {
+      // let applyTax = true; //$('#apply-tax').is(':checked');
+      let currentQty = parseInt(($('#selected-product-quantity').val()).replace(',', '.'), 10);
+      let price = parseFloat(($('#selected-product-price-hidden').val()).replace(',', '.'));
+      let price_unit = $('#selected-product-unit-price-hidden').val();
+      // let tax_rate = parseFloat(($('#selected-product-tax-rate-hidden').val()).replace(',', '.'));
+      // let tax_rate_brut = parseFloat(($('#selected-product-tax-rate-brut-hidden').val()).replace(',', '.'));
+
+      if (isNaN(currentQty)) currentQty = 0;
+      if (isNaN(price)) price = 0;
+      // if (isNaN(tax_rate)) tax_rate = 0;
+      // if (isNaN(tax_rate_brut)) tax_rate_brut = 0;
+
+      let htAmount = currentQty * price;
+      // let taxAmount = applyTax == true ? htAmount * tax_rate : 0;
+      // let ttcAmount = htAmount + taxAmount;
+
+      $('#selected-product-ht-amount').html(`Montant HT: <b>${htAmount.toFixed(0)}</b> <small>${price_unit}</small>`);
+      // $('#selected-product-tax-amount').html(`Tax: <b>${taxAmount.toFixed(0)}</b> ${price_unit} ( ${tax_rate_brut} % )`);
+      // $('#selected-product-ttc-amount').html(`Montant TTC: <b>${ttcAmount.toFixed(0)}</b> ${price_unit}`);
+
+      let minusDisabled = currentQty < 2;
+      let plusDisabled = currentQty > 98;
+      $('#decrement-qty').prop('disabled', minusDisabled);
+      $('#increment-qty').prop('disabled', plusDisabled);
+   }
+
+   // Check enable/disable every time the input is changed
+   $('#selected-product-quantity').change(function () {
+      handleEnableDisable();
+   });
+
+   // $('#apply-tax').change(function () {
+   //    let val = $('#apply-tax').val();
+   //    handleEnableDisable();
+   // });
+
+   // Increment quantity
+   $('.increment-qty').click(function (e) {
+      e.preventDefault();
+      let currentQty = parseInt($(`#selected-product-quantity`).val());
+      $(`#selected-product-quantity`).val(currentQty + 1);
+      handleEnableDisable();
+   });
+
+   // Decrement quantity
+   $('.decrement-qty').click(function (e) {
+      e.preventDefault();
+      let currentQty = parseInt($(`#selected-product-quantity`).val());
+      $(`#selected-product-quantity`).val(currentQty - 1);
+      handleEnableDisable();
+   });
+
+</script>
+
+
+{% endblock %}

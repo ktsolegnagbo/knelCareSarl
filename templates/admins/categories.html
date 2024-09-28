@@ -1,0 +1,230 @@
+{% extends 'app-base.html' %}
+{% load permissions_tags %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}KnelCare-Auth{% endblock %}
+
+{% block extra_css %}
+   <style>
+      /* styles.css */
+      .custom-clearable-file-input {
+         border: 1px solid #ddd;
+         padding: 5px;
+         border-radius: 4px;
+         width: 100%;
+      }
+
+      .custom-clearable-file-input:hover {
+         border-color: #aaa;
+      }
+   </style>
+{% endblock %}
+
+{% block content %}
+{% if  request.user|can_view_category and request.user|is_administrator %}
+  <div class="card">
+   <div style="height: 60px; padding: 10px;" class="card-header">
+      {% if  request.user|can_create_category%}
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#adminAddOrUpdateCategoryModal" data-action-type="create">
+          <b style="font-size: 18px;">Ajouter une nouvelle categorie</b>
+        </button>
+      {% endif %}
+
+      {% if categories|length > 0 %}
+        <button style="background:orange; padding: 5px;font-size:14px; margin-left: 20px;" class="btn btn-warning"  id="exportBtn1" onclick="ExportTableData('dataTable', 'categories');">Télécharger en Excel</button>
+      {% endif %}
+
+      <h4 style="float: right;">Liste des categories</h4>
+    </div>
+
+   <div class="table-responsive text-nowrap">
+    <table class="table" id="dataTable">
+      {% if categories|length > 0 %}
+        <thead class="table-dark">
+          <tr style="display: none;">
+            <th colspan="4">Liste des categories</th>
+          </tr>
+
+          <tr>
+            <th style="color: white;">ID catégorie</th>
+            <th style="color: white;">Nom de la catégorie</th>
+            <th style="color: white;">Description</th>
+            <th data-exclude="true" style="color: white;">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="table-border-bottom-0">
+          {% for category in categories %} 
+            <tr>
+                <td><strong>{{ category.id }}</strong></td>
+                <td><strong>{{ category.name }}</strong></td>
+                <td><strong>{{ category.description }}</strong></td>
+                
+                <td data-exclude="true">
+                  {% if  request.user|can_update_category or request.user|can_delete_category %}
+                    <div class="dropdown">
+                      <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                        <i style="font-size: 25px;" class="bx bx-dots-vertical-rounded"></i>
+                      </button>
+                      <div class="dropdown-menu">
+                        {% if  request.user|can_update_category %}
+                          <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminAddOrUpdateCategoryModal" data-category="{{ category.toMap }}" data-action-type="update">
+                            <i class="bx bx-edit-alt me-1"></i> Modifier
+                          </button>
+                        {% endif %}
+
+                        {% if  request.user|can_delete_category %}
+                          <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminDeleteCategoryModal" data-id="{{ category.id }}" data-name="{{ category.name }}">
+                            <i class="bx bx-trash me-1"></i>  Supprimer
+                          </button>
+                        {% endif %}
+                      </div>
+                    </div>
+                  {% endif %}
+                </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      {% else %}
+        <tr data-exclude="true">
+            <th data-exclude="true" colspan="14" style="color:brown; font-weight: bold;">Pas de données disponible</th>
+        </tr>
+      {% endif %}
+     </table>
+   </div>
+ </div>
+ <div class="overlay"></div>
+
+{% endif %}
+{% endblock %} 
+
+
+{% block modalsBlock %}
+  <div class="modal fade" id="adminAddOrUpdateCategoryModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog">
+      <form  id="adminAddOrUpdateCategoryFormModal" method="POST" action="" class="form modal-content" enctype="multipart/form-data">
+
+        <div class="modal-header">
+          <h5 class="modal-title" id="adminAddOrUpdateCategoryModalTitle"></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          {% csrf_token %} 
+          <input type="hidden" name="category_action" value="">
+          {% for field in form %} 
+              <div class="mb-2">
+                  {{ field | as_crispy_field }} 
+                  {% if field.errors %}
+                    <!-- <div class="error">{#{ field.errors.0 }#}</div> -->
+                    <div class="text-danger">{{ field.errors }}</div>
+                  {% endif %}
+              </div>
+          {% endfor %}
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+          
+          <button id="adminAddOrUpdateCategorySubmitBtnModal" type="submit" class="btn btn-primary"></button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <div class="modal fade" id="adminDeleteCategoryModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logoutModalTitle">Suppression de categorie</h5>
+                <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
+            </div>
+            <div class="modal-body">
+                <label for="nameBackdrop" class="form-label">
+                  Êtes-vous sûr de vouloir supprimer la categorie <strong id="category-name"></strong> ?
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Annuler
+                </button>
+
+                <form id="delete-form" action="" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="category_action" value="delete">
+                    <button type="submit" class="btn btn-danger">Oui, supprimer</button>
+                </form>
+
+            </div>
+        </div>
+    </div>
+  </div>
+{% endblock %}
+
+
+{% block postloadjs %} 
+{{ block.super }}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+      const deleteModal = document.getElementById('adminDeleteCategoryModal');
+      const categoryNameElement = document.getElementById('category-name');
+      const deleteForm = document.getElementById('delete-form');
+
+      deleteModal.addEventListener('show.bs.modal', function (event) {
+          const button = event.relatedTarget; // Button that triggered the modal
+          const categoryId = button.getAttribute('data-id');
+          const categoryName = button.getAttribute('data-name');
+          categoryNameElement.textContent = categoryName;
+
+          const actionUrl = `{% url 'admin_delete_category' 0 %}`.replace('/0/', `/${categoryId}/`);
+          deleteForm.setAttribute('action', actionUrl);
+      });
+  });
+
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const addUpdateModal = document.getElementById('adminAddOrUpdateCategoryModal');
+    const form = document.getElementById('adminAddOrUpdateCategoryFormModal');
+    const formTitle = document.getElementById('adminAddOrUpdateCategoryModalTitle');
+    const formSubmitBtn = document.getElementById('adminAddOrUpdateCategorySubmitBtnModal');
+    
+    addUpdateModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget; // Button that triggered the modal
+        const dataActionType = button.getAttribute('data-action-type');
+        
+        if (dataActionType === 'update') {
+            // Populate fields for updating category
+            const dataCategory = button.getAttribute('data-category');
+            const category = JSON.parse(dataCategory);
+
+            const categoryId = category.id;
+
+            form.querySelector('[name="name"]').value = category.name;
+            form.querySelector('[name="description"]').value = category.description;
+            
+            form.querySelector('[name="category_action"]').value = 'update';
+            formTitle.textContent = 'Modifier une categorie';
+            formSubmitBtn.textContent = 'Modifier cette categorie';
+
+            // Set the correct action URL for updating the category
+            const actionUrl = `{% url 'admin_update_category' 0 %}`.replace('/0/', `/${categoryId}/`);
+            form.setAttribute('action', actionUrl);
+            
+        } else {
+            form.querySelector('[name="name"]').value = '';
+            form.querySelector('[name="description"]').value = '';
+
+            form.querySelector('[name="category_action"]').value = 'create';
+            formTitle.textContent = 'Ajouter une categorie';
+            formSubmitBtn.textContent = 'Ajouter à la categorie';
+
+            // Set the correct action URL for creating a new category
+            const actionUrl = `{% url 'admin_create_category' %}`;
+            form.setAttribute('action', actionUrl);
+        }
+    });
+});
+
+</script>
+{% endblock %}

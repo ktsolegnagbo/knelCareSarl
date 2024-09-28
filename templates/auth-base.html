@@ -1,0 +1,97 @@
+{% load static %}
+{% load i18n %}
+{% load pwa %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- {#% progressive_web_app_meta %#} -->
+    <meta charset="UTF-8">
+    <meta name="description" content="" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}KnelCare{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{{ MEDIA_URL }}logo.png" />
+
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    
+    <!-- <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> -->
+    <!-- <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet"> -->
+    <!-- <link rel="stylesheet" href="{#% static 'fonts/googleapis.css' %#}"> -->
+    
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"> -->
+    <!-- <link rel="stylesheet" href="{#% static 'fonts/cdnjs.cloudflare.min.css' %#}"> -->
+    
+
+    <link rel="stylesheet" href="{% static 'fonts/boxicons.css' %}">
+    <link rel="stylesheet" href="{% static 'css/core.css' %}">
+    <link rel="stylesheet" href="{% static 'css/theme-default.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/libs/apex-charts/apex-charts.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/css/pages/page-auth.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    
+    <script src="{% static 'vendor/js/helpers.js' %}"></script>
+    <script src="{% static 'js/config.js' %}"></script>
+</head>
+
+<body>
+    <div class="container-xxl"></div>
+        <div class="authentication-wrapper authentication-basic container-p-y">
+            <div class="authentication-inner">
+                <div class="card">
+                    {% include 'layouts/_messages.html' %}
+                    <div class="card-body">
+                        <!-- <div class="app-brand justify-content-center">
+                            <a href="index.html" class="app-brand-link gap-2">
+                                <span class="app-brand-text demo text-body fw-bolder">KnelCare</span>
+                            </a>
+                        </div> -->
+                        <div class="app-logo">
+                            <a href="{% url 'home' %}" class="app-brand-link">
+                                <img src="{{ MEDIA_URL }}logo.png" alt="KnelCare" />
+                            </a>
+                        </div>
+                        <hr>
+                        {% block content %}{% endblock %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{% static 'vendor/js/helpers.js' %}"></script>
+    <script src="{% static 'vendor/libs/jquery/jquery.js' %}"></script>
+    <script src="{% static 'vendor/libs/popper/popper.js' %}"></script>
+    <script src="{% static 'vendor/js/bootstrap.js' %}"></script>
+    <script src="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.js' %}"></script>
+    <script src="{% static 'vendor/js/menu.js' %}"></script>
+    <script src="{% static 'vendor/libs/apex-charts/apexcharts.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/serviceworker.js').then(function(registration) {
+                console.log('Service Worker registered with scope:', registration.scope);
+                }, function(err) {
+                console.log('Service Worker registration failed:', err);
+                });
+            });
+        }
+    </script>
+      
+
+
+    <script src="{% static 'flashy.js' %}"></script>
+    {#% if messages %#}
+    {#% for message in messages %#}
+    <script>
+        flashy("{{ message }}", "{{ message.tags }}");
+    </script>
+    {#% endfor %#}
+    {#% endif %#}
+</body>
+
+</html>

@@ -1,0 +1,31 @@
+{% extends 'app-base.html' %}
+{% load permissions_tags %}
+{% load custom_filters %}
+{% load static %}
+
+{% block title %}KnelCare-Auth{% endblock %}
+
+
+{% block content %}
+  <!-- {#% if  request.user|can_view_group %#} -->
+<h1>{% if form.instance.pk %}Update Group{% else %}Create Group{% endif %} Group</h1>
+<form method="post">
+  {% csrf_token %}
+  <div>
+    <label for="id_name">Group Name</label>
+    {{ form.name }}
+  </div>
+  <div>
+    <h3>Permissions</h3>
+    {{ form.permissions }}
+  </div>
+  <div>
+    <h3>Assign Users to Group</h3>
+    {{ form.users }}
+  </div>
+  <button type="submit" class="btn btn-primary">
+    {% if form.instance.pk %}Update Group{% else %}Create Group{% endif %}
+  </button>
+</form>
+  <!-- {#% endif %#} -->
+{% endblock %}

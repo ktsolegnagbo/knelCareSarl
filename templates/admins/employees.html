@@ -1,0 +1,551 @@
+{% extends 'app-base.html' %}
+{% load permissions_tags %}
+{% load static %}
+
+{% block title %}KnelCare-Auth{% endblock %}
+
+{% block extra_css %}
+   <style>
+      /* styles.css */
+      .custom-clearable-file-input {
+         border: 1px solid #ddd;
+         padding: 5px;
+         border-radius: 4px;
+         width: 100%;
+      }
+
+      .custom-clearable-file-input:hover {
+         border-color: #aaa;
+      }
+   </style>
+{% endblock %}
+
+{% block content %}
+  {% if  request.user|can_view_employee and request.user|is_administrator %}
+    <div class="card">
+      <div style="height: 60px; padding: 10px;" class="card-header">
+          {% if  request.user|can_create_employee %}
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#adminAddOrUpdateUserModal" data-action-type="create">
+              <b style="font-size: 18px;">Ajouter un nouvel utilisateur</b>
+            </button>
+          {% endif %}
+
+          {% if employees|length > 0 %}
+            <button style="background:orange; padding: 5px;font-size:14px; margin-left: 20px;" class="btn btn-warning"  id="exportBtn1" onclick="ExportTableData('dataTable', 'utilisateurs');">Télécharger en Excel</button>
+          {% endif %}
+
+          <h4 style="float: right;">Liste des utilisateurs</h4>
+      </div>
+
+      <div class="table-responsive text-nowrap">
+        <table class="table" id="dataTable">
+          <!-- <thead data-exclude="true" class="table-dark">
+            <tr data-exclude="true">
+              <th data-exclude="true" colspan="11">
+                <form action="" method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="user_action" value="roles_filter">
+
+                  <div style="width: 250px;" class="input-group input-group-merge">
+                    <select style="font-weight: bold;" name="employee_roles" id="employee-roles" class="form-select">
+                        <option value="">Tous</option>
+                        {% for role in roles %}
+                            <option value="{{ role.id }}" {% if role.id in filter_roles %}selected{% endif %}>{{ role.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="input-group-text">
+                        <i class="bx bx-search"></i>
+                    </button>
+                </div>
+                </form>
+              </th>
+            </tr>
+          </thead> -->
+
+          {% if employees|length > 0 %}
+            <thead class="table-dark">
+              <tr style="display: none;">
+                <th colspan="9">Liste des utilisateurs</th>
+              </tr>
+              <tr>
+                <th data-exclude="true" style="color: white;">Image</th>
+                <th style="color: white;">Nom & prénoms</th>
+                <th style="color: white;">Nom utilisateur</th>
+                <th style="color: white;">email</th>
+                <th style="color: white;">Téléphone</th>
+                <th style="color: white;">Salaire de base</th>
+                <th style="color: white;">Numero de téléphone</th>
+                <th style="color: white;">Date de naissance</th>
+                <!-- <th style="color: white;">Roles</th> -->
+                <th style="color: white;">Status</th>
+                <th data-exclude="true" style="color: white;">Actions</th>
+              </tr>
+            </thead>
+            
+            <tbody class="table-border-bottom-0">
+              {% for employee in employees %} 
+                <tr>
+                    <td data-exclude="true">
+                      <img style="height: 30px; max-width: 100px;" src="/static/{{ employee.imageUrl }}" alt="{{ employee.full_name }}">
+                    </td>
+                    <td>{% if employee.full_name  %}{{ employee.full_name }}{% endif %}</td>
+                    <td>{% if employee.user.username %}<strong>{{ employee.user.username }}</strong>{% endif %}</td>
+                    <td>{% if employee.user.email %}{{ employee.user.email }}{% endif %}</td>
+                    <td>{% if employee.phone_number %}{{ employee.phone_number }}{% endif %}</td>
+                    <td>{% if employee.salary_base %}{{ employee.salary_base }}{% endif %}</td>
+                    <td>{% if employee.phone_number %}{{ employee.phone_number }}{% endif %}</td>
+                    <td>{% if employee.birth_date %}{{ employee.birth_date }}{% endif %}</td>
+                    <td>{% if employee.roles %}{{ employee.list_roles_name }}{% endif %}</td>
+                    <td><span class="badge bg-label-{% if employee.user.is_active %}primary{% else %}danger{% endif %} me-1">{% if employee.user.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+
+                    <td data-exclude="true">
+                      {% if  request.user|can_update_employee or request.user|can_delete_employee or request.user|can_give_permission or request.user|can_make_payroll %}
+                        <div class="dropdown">
+                          <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                            <i style="font-size: 25px;" class="bx bx-dots-vertical-rounded"></i>
+                          </button>
+                          <div class="dropdown-menu">
+                            {% if  request.user|can_make_payroll %}
+                              <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminMakeUserPaymentModal" data-user="{{ employee.toMap }}" data-action-type="payment">
+                                <i class="bx bxl-paypal me-1"></i> Effectuer un paiement
+                              </button>
+                            {% endif %}
+                            {% if  request.user|can_give_permission %}
+                              <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminUserPermissionModal" data-user="{{ employee.toMap }}" data-action-type="permission">
+                              <i class="bx bx-lock me-1"></i> Permission/Autorisation
+                              </button>
+                            {% endif %}
+                            {% if  request.user|can_update_employee %}
+                              <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminAddOrUpdateUserModal" data-user="{{ employee.toMap }}" data-action-type="update">
+                              <i class="bx bx-edit-alt me-1"></i> Modifier
+                              </button>
+                            {% endif %}
+                            {% if  request.user|can_delete_employee %}
+                              <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminDeleteUserModal" data-id="{{ employee.id }}" data-name="{{ employee.user.username }}">
+                                <i class="bx bx-trash me-1"></i>  Supprimer
+                              </button>
+                            {% endif %}
+                          </div>
+                        </div>
+                      {% endif %}
+                    </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          {% else %}
+            <tr data-exclude="true">
+                <th data-exclude="true" colspan="14" style="color:brown; font-weight: bold;">Pas de données disponible</th>
+            </tr>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+    <div class="overlay"></div>
+  {% endif %}
+{% endblock %} 
+
+
+{% block modalsBlock %}
+    <div class="modal fade" id="adminUserPermissionModal" data-bs-backdrop="static" tabindex="-1">
+      <div class="modal-dialog">
+        <form id="adminUserPermissionFormModal" action="" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="permission_action" value="update">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title">Permissions / Autorisations</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+
+                <h4 class="mb-4"><strong id="adminUserPermissionFullnameModal">Permissions</strong></h4>
+
+                <div class="row" id="adminUserPermissionModalContent"></div>
+                
+              </div>
+              <div class="modal-footer">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                  <button type="submit" class="btn btn-danger">Mettre à jour</button>
+              </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal fade" id="adminMakeUserPaymentModal" data-bs-backdrop="static" tabindex="-1">
+      <div class="modal-dialog">
+        <form id="adminMakeEmployeePaymentFormModal" action="" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="user_action" value="make_employee_payment">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title">Effectuer un paiement de salaire</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+
+                <h4 class="mb-4">Employé: <strong id="adminMakeEmployeePaymentFullName"></strong></h4>
+
+                <div class="mb-3">
+                  <label for="employee-salary-date" class="form-label">Date paiement du salaire <b class="field-required"> *</b></label>
+                  <div class="input-group input-group-merge">
+                      <span class="input-group-text"><i class="bx bx-calendar"></i></span>
+                      <input id="employee-salary-date" name="employee_salary_date" class="form-control" required="required" type="date" value="{% now 'Y-m-d' %}" />
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label" for="employee-base-salary">Salaire de base <b class="field-required">*</b></label>
+                  <div class="input-group input-group-merge">
+                    <span class="input-group-text"><i class="bx bx-money"></i></span>
+                    <input id="employee-base-salary" name="employee_base_salary" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="1" placeholder="Saisir Le Salaire de base" class="form-control" />
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label" for="employee-commission">Commission sur vente <b class="field-required">*</b></label>
+                  <div class="input-group input-group-merge">
+                    <span class="input-group-text"><i class="bx bx-money"></i></span>
+                    <input id="employee-commission" name="employee_commission" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="1" placeholder="Saisir La Commission Sur Vente" class="form-control" />
+                  </div>
+                </div>
+
+              </div>
+              <div class="modal-footer">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                  <button type="submit" class="btn btn-danger">Oui, supprimer</button>
+              </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal fade" id="adminAddOrUpdateUserModal" data-bs-backdrop="static" tabindex="-1">
+       <div class="modal-dialog">
+          <form  id="adminAddOrUpdateUserFormModal" method="POST" action="" class="form modal-content" enctype="multipart/form-data" autocomplete="off">
+
+           <div class="modal-header">
+             <h5 class="modal-title" id="adminAddOrUpdateUserModalTitle"></h5>
+             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+           </div>
+
+           <div class="modal-body">
+              {% csrf_token %} 
+              <input type="hidden" name="user_action" value="">
+
+
+              {% for field in user_form %} 
+                {% if field.name == 'password' %}  
+                  <div class="form-password-toggle mb-2">
+                    <label class="form-label" for="password">Entrez le mot de passe <span id="passwordAsteriskField" class="asteriskField">*</span></label>
+                    <div class="input-group input-group-merge">
+                      <!-- {#{ user_form.password }#} -->
+                      <input
+                        type="password"
+                        name="password"
+                        class="form-control"
+                        id="password"
+                        required="required"
+                        placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;"
+                        aria-describedby="password_aria"
+                      />
+                      <span class="input-group-text cursor-pointer" id="password_aria"><i class="bx bx-hide"></i></span>
+                    </div>
+                  </div>
+
+                  <div class="form-password-toggle mb-2">
+                    <label class="form-label" for="password_confirm">Entrez à nouveau le mot de passe <span id="passwordConfirmAsteriskField" class="asteriskField">*</span></label>
+                    <div class="input-group input-group-merge">
+                      <!-- {#{ user_form.password_confirm }#} -->
+                      <input
+                        type="password"
+                        name="password_confirm"
+                        class="form-control"
+                        id="password_confirm"
+                        required="required"
+                        placeholder="&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;&#xb7;"
+                        aria-describedby="password_confirm_aria"
+                      />
+                      <span id="password_confirm_aria" class="input-group-text cursor-pointer"><i class="bx bx-hide"></i></span>
+                    </div>
+                  </div>
+
+                  {% else %} 
+                    <div class="mb-2">
+                      {{ field | as_crispy_field }} 
+                      {% if field.errors %}
+                          <div class="error">{{ field.errors.0 }}</div>
+                      {% endif %}
+                    </div>
+                  {% endif %} 
+              {% endfor %}
+
+
+              {% for field in employee_form %} 
+                {% if field.name != 'employee_pic' %} 
+                    <div class="mb-2">
+                      {{ field | as_crispy_field }} 
+                      {% if field.errors %}
+                          <div class="error">{{ field.errors.0 }}</div>
+                      {% endif %}
+                    </div>
+                {% else %} 
+                    <div class="mb-4">
+                      {{ field.label_tag }}
+
+                      <img style="visibility: hidden; height: 100px; margin-bottom: 10px;" id="imagePreview" src="" alt="">
+
+                      {{ field }} 
+                      {% if field.errors %}
+                          <div class="error">{{ field.errors }}</div>
+                      {% endif %}
+                    </div> 
+                {% endif %} 
+              {% endfor %}
+            </div>
+
+            <div class="modal-footer">
+             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+             
+             <button id="adminAddOrUpdateUserModalSubmit" type="submit" class="btn btn-primary"></button>
+           </div>
+
+         </form>
+       </div>
+    </div>
+
+    <div class="modal fade" id="adminDeleteUserModal" data-bs-backdrop="static" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logoutModalTitle">Suppression de produit</h5>
+                    <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
+                </div>
+                <div class="modal-body">
+                    <label for="nameBackdrop" class="form-label">
+                      Êtes-vous sûr de vouloir supprimer le produit <strong id="user-name"></strong> ?
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        Annuler
+                    </button>
+
+                    <form id="delete-form" action="" method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_action" value="delete">
+                        <button type="submit" class="btn btn-danger">Oui, supprimer</button>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block postloadjs %} 
+{{ block.super }}
+<script>
+   $("#new-image").change(function () {
+       let file = $("#new-image")[0].files[0];
+       $("#filename").text(`Image will be set to: ${file.name}`);
+   });
+
+  function checkIfContainPermission(id, idsList){
+    return (idsList??[]).includes(id) ? 'checked' : ''
+  }
+
+   document.addEventListener('DOMContentLoaded', function () {
+      const deleteModal = document.getElementById('adminDeleteUserModal');
+      const userNameElement = document.getElementById('user-name');
+      const deleteForm = document.getElementById('delete-form');
+      deleteModal.addEventListener('show.bs.modal', function (event) {
+          const button = event.relatedTarget; // Button that triggered the modal
+          const userId = button.getAttribute('data-id');
+          const userName = button.getAttribute('data-name');
+          userNameElement.textContent = userName;
+          const actionUrl = `{% url 'admin_delete_user' 0 %}`.replace('/0/', `/${userId}/`);
+          deleteForm.setAttribute('action', actionUrl);
+      });
+
+      // ###################################################################
+
+      const addUpdateModal = document.getElementById('adminAddOrUpdateUserModal');
+      const addOrUpdateUserForm = document.getElementById('adminAddOrUpdateUserFormModal');
+      const addOrUpdateUserFormTitle = document.getElementById('adminAddOrUpdateUserModalTitle');
+      const addOrUpdateUserModalSubmit = document.getElementById('adminAddOrUpdateUserModalSubmit');
+      const roleSelect = document.getElementById('id_roles');
+      const passwordAsterisk = document.getElementById('passwordAsteriskField');
+      const passwordConfirmAsterisk = document.getElementById('passwordConfirmAsteriskField');
+      addUpdateModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget; // Button that triggered the modal
+        const dataActionType = button.getAttribute('data-action-type');
+        if (dataActionType == 'update') {
+          const dataUser = button.getAttribute('data-user');
+          let user = JSON.parse(dataUser);
+
+          const userId = user.id;
+          addOrUpdateUserForm.querySelector('[name="username"]').value = user.username;
+          addOrUpdateUserForm.querySelector('[name="first_name"]').value = user.first_name;
+          addOrUpdateUserForm.querySelector('[name="last_name"]').value = user.last_name;
+          addOrUpdateUserForm.querySelector('[name="email"]').value = user.email;
+          addOrUpdateUserForm.querySelector('[name="password"]').value = '';
+          addOrUpdateUserForm.querySelector('[name="password"]').required = false;
+          passwordAsterisk.style.visibility = 'hidden';
+          addOrUpdateUserForm.querySelector('[name="password_confirm"]').value = '';
+          addOrUpdateUserForm.querySelector('[name="password_confirm"]').required = false;
+          passwordConfirmAsterisk.style.visibility = 'hidden';
+          // addOrUpdateUserForm.querySelector('[name="country"]').value = user.country;
+          // addOrUpdateUserForm.querySelector('[name="roles"]').value = ['1','2'];
+
+          const userRoles = user.roles ? user.roles.trim().replaceAll(' ', '').split(',') : [];
+          for (let i = 0; i < roleSelect.options.length; i++) {
+              let option = roleSelect.options[i];
+              if (userRoles.includes(`${option.value}`)) {
+                  option.selected = true;
+              } else {
+                  option.selected = false; // Deselect if it's not in userRoles
+              }
+          }
+
+          addOrUpdateUserForm.querySelector('[name="phone_number"]').value = user.phone_number;
+          // addOrUpdateUserForm.querySelector('[name="biography"]').value = user.biography;
+          // addOrUpdateUserForm.querySelector('[name="location"]').value = user.location;
+          // addOrUpdateUserForm.querySelector('[name="birth_date"]').value = user.birth_date;
+          
+          addOrUpdateUserForm.querySelector('[name="salary_base"]').value = user.salary_base;
+          
+          addOrUpdateUserForm.querySelector('[name="is_active"]').checked = user.is_active == true;
+          // addOrUpdateUserForm.querySelector('[name="agree_privacy_policy"]').checked = user.agree_privacy_policy == true;
+          // addOrUpdateUserForm.querySelector('[name="employee_pic"]').src = user.employee_pic;
+          // addOrUpdateUserForm.querySelector('[name="employee_pic"]').value = '';
+          // addOrUpdateUserForm.querySelector('[name="employee_pic_thumb"]').value = user.employee_pic_thumb;
+          // const imagePreview = document.getElementById('imagePreview');
+          // if (imagePreview) {
+          //   if(user.employee_pic && user.employee_pic!=null && user.employee_pic!='') {
+          //     imagePreview.src = user.employee_pic;
+          //     imagePreview.style.visibility = 'visible';
+          //   } else {
+          //     imagePreview.style.visibility = 'hidden';
+          //   }
+          // }
+          
+          addOrUpdateUserForm.querySelector('[name="user_action"]').value = 'update';
+          addOrUpdateUserFormTitle.textContent = 'Modification de l\'employé'
+          addOrUpdateUserModalSubmit.textContent = 'Modifier un employé'
+          const actionUrl = `{% url 'admin_update_user' 0 %}`.replace('/0/', `/${userId}/`);
+          addOrUpdateUserForm.setAttribute('action', actionUrl);
+        
+        } else {
+          addOrUpdateUserForm.querySelector('[name="username"]').value = '';
+          addOrUpdateUserForm.querySelector('[name="first_name"]').value = '';
+          addOrUpdateUserForm.querySelector('[name="last_name"]').value = '';
+          addOrUpdateUserForm.querySelector('[name="email"]').value = '';
+          addOrUpdateUserForm.querySelector('[name="password"]').value = '';
+          addOrUpdateUserForm.querySelector('[name="password"]').required = true;
+          passwordAsterisk.style.visibility = 'hidden';
+          addOrUpdateUserForm.querySelector('[name="password_confirm"]').value = '';
+          addOrUpdateUserForm.querySelector('[name="password_confirm"]').required = true;
+          passwordConfirmAsterisk.style.visibility = 'visible';
+
+          // addOrUpdateUserForm.querySelector('[name="country"]').value = '';
+          addOrUpdateUserForm.querySelector('[name="roles"]').value = [];
+          
+          addOrUpdateUserForm.querySelector('[name="phone_number"]').value = '';
+          
+          // addOrUpdateUserForm.querySelector('[name="biography"]').value = '';
+          // addOrUpdateUserForm.querySelector('[name="location"]').value = '';
+          // addOrUpdateUserForm.querySelector('[name="birth_date"]').value = '';
+          
+          addOrUpdateUserForm.querySelector('[name="salary_base"]').value = '';
+          
+          addOrUpdateUserForm.querySelector('[name="is_active"]').checked = false;
+          // addOrUpdateUserForm.querySelector('[name="agree_privacy_policy"]').checked = false;
+          // addOrUpdateUserForm.querySelector('[name="employee_pic"]').src = '';
+          // addOrUpdateUserForm.querySelector('[name="employee_pic"]').value = '';
+          
+          // const imagePreview = document.getElementById('imagePreview');
+          // if (imagePreview) imagePreview.style.visibility = 'hidden';
+
+          addOrUpdateUserForm.querySelector('[name="user_action"]').value = 'create';
+          addOrUpdateUserFormTitle.textContent = 'Enrégistrement d\'un employé'
+          addOrUpdateUserModalSubmit.textContent = 'Ajouter un employé'
+          const actionUrl = `{% url 'admin_create_user' %}`;
+          addOrUpdateUserForm.setAttribute('action', actionUrl);
+        }
+      });
+  
+  // ###################################################################
+  
+  const makeUserPaymentModal = document.getElementById('adminMakeUserPaymentModal');
+  const makeEmployeePaymentFormModal = document.getElementById('adminMakeEmployeePaymentFormModal');
+  const makeEmployeePaymentFullName = document.getElementById('adminMakeEmployeePaymentFullName');
+  makeUserPaymentModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget; // Button that triggered the modal
+    const dataActionType = button.getAttribute('data-action-type');
+    if (dataActionType == 'payment') {
+      const dataUser = button.getAttribute('data-user');
+      let user = JSON.parse(dataUser);
+      const userId = user.id;
+
+      makeEmployeePaymentFullName.textContent = user.full_name ?? user.userName;
+      // makeEmployeePaymentFormModal.querySelector('[name="employee_salary_date"]').value = '';
+      makeEmployeePaymentFormModal.querySelector('[name="employee_base_salary"]').value = user.salary_base;
+      makeEmployeePaymentFormModal.querySelector('[name="employee_commission"]').value = 0;
+
+      const actionUrl = `{% url 'admin_employee_salary_payment' 0 %}`.replace('/0/', `/${userId}/`);
+      makeEmployeePaymentFormModal.setAttribute('action', actionUrl);
+    }
+  });
+  
+  // ###################################################################
+  
+  const userPermissionModal = document.getElementById('adminUserPermissionModal');
+  const userPermissionFormModal = document.getElementById('adminUserPermissionFormModal');
+  const userPermissionFullnameModal = document.getElementById('adminUserPermissionFullnameModal');
+  const userPermissionModalContent = document.getElementById('adminUserPermissionModalContent');
+  userPermissionModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget; // Button that triggered the modal
+    const dataActionType = button.getAttribute('data-action-type');
+    if (dataActionType == 'permission') {
+      const dataUser = button.getAttribute('data-user');
+      let user = JSON.parse(dataUser);
+      const userId = user.id;
+      
+      let permissionContent = '';
+      const permissions_ids = user.permissions_ids;
+      
+      {% for model, permissions in grouped_permissions.items %}
+        permissionContent += `
+          <div class="col-md-6 mb-4">
+            <h5>{{ model|capfirst }}</h5>
+            <div>
+              {% for permission in permissions %}
+              <div class="mb-2">
+                  <div class="form-check">
+                      <input id="permissions-{{ permission.id }}" class="form-check-input" type="checkbox" name="permissions" 
+                            value="{{ permission.id }}" ${checkIfContainPermission({{ permission.id }}, permissions_ids)}/>
+                      <label class="form-check-label" for="permissions-{{ permission.id }}">{{ permission.name }}</label>
+                  </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        `;
+      {% endfor %}
+
+      userPermissionFullnameModal.textContent = user.full_name ?? user.userName;
+      userPermissionModalContent.innerHTML = permissionContent;
+
+      const actionUrl = `{% url 'user_permissions' 0 %}`.replace('/0/', `/${userId}/`);
+      userPermissionFormModal.setAttribute('action', actionUrl);
+    }
+  });
+
+      
+      
+  
+  });
+</script>
+{% endblock %}

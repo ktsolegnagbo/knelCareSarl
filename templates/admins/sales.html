@@ -1,0 +1,559 @@
+{% extends 'app-base.html' %}
+{% load permissions_tags %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}KnelCare-Auth{% endblock %}
+
+{% block extra_css %}
+   <style>
+      /* styles.css */
+      .custom-clearable-file-input {
+         border: 1px solid #ddd;
+         padding: 5px;
+         border-radius: 4px;
+         width: 100%;
+      }
+
+      .custom-clearable-file-input:hover {
+         border-color: #aaa;
+      }
+   </style>
+{% endblock %}
+
+{% block content %}
+  {% if  request.user|can_view_sale and request.user|is_administrator %}
+    <div class="card">
+    <div style="height: 50px; padding: 10px;" class="card-header">
+        {% if sales|length > 0 %}
+          <button style="background:orange; padding: 5px;font-size:14px" class="btn btn-warning"  id="exportBtn1" onclick="ExportTableData('dataTable', 'ventes');">Télécharger en Excel</button>
+          <!-- <button style="background:orange; padding: 5px;font-size:14px" class=""  id="exportBtn1" onclick="generatePdf('dataTable');">Télécharger en PDF</button> -->
+        {% endif %}        
+        <h4 style="float: right;">Liste des ventes</h4>
+      </div>
+
+    <div class="table-responsive text-nowrap">
+      <table class="table" id="dataTable">
+        <thead data-exclude="true" class="table-dark">
+          <tr data-exclude="true">
+            <th data-exclude="true" colspan="16">
+              <form action="" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="sale_action" value="sales_filter">
+
+                <div style="width: 650px!important;" class="input-group input-group-merge">
+                  <select style="font-weight: bold; margin-right: 2px;" name="sale_status" id="sale-status" class="form-select">
+                      <option value="">Tous Status</option>
+                      {% for stus in status %}
+                          <option value="{{ stus.id }}" {% if stus.id in filter_status %}selected{% endif %}>{{ stus.name }}</option>
+                      {% endfor %}
+                  </select>
+
+                  <select style="font-weight: bold; margin-right: 2px;" name="sale_clients" id="sale-clients" class="form-select">
+                      <option value="">Tous Clients</option>
+                      {% for client in clients %}
+                          <option value="{{ client.id }}" {% if client.id|stringformat:"s" in filter_clients %}selected{% endif %}>{{ client.full_name }}</option>
+                      {% endfor %}
+                  </select>
+                  
+                  <input type="date" value="{{ filter_start_date }}" style="font-weight: bold; margin-right: 2px; padding: 2px 5px 2px 5px;" name="sale_start_date" id="sale-start-date" class="form-control">
+                  <input type="date" value="{{ filter_end_date }}" style="font-weight: bold; margin-right: 2px; padding: 2px 5px 2px 5px;" name="sale_end_date" id="sale-end-date" class="form-control">
+                  
+                  <button type="submit" class="input-group-text">
+                      <i class="bx bx-search"></i>
+                  </button>
+              </div>
+              </form>
+            </th>
+          </tr>
+          </thead>
+
+          {% if sales|length > 0 %}
+            <thead class="table-dark">
+              <tr style="display: none;">
+                <th colspan="15">Liste des Ventes</th>
+              </tr>
+              <tr>
+                <th style="color: white;">Status paiement</th>
+                <th style="color: white;">Nom & Prénoms</th>
+                <th style="color: white;">Remise <span style="font-size: 10px;">( {{ price_unit }} )</span></th>
+                <th style="color: white;">Taxe <span style="font-size: 10px;">( {{ price_unit }} )</span></th>
+                <th style="color: white;">Montant HT <span style="font-size: 10px;">( {{ price_unit }} )</span></th>
+                <th style="color: white;">Montant TTC <span style="font-size: 10px;">( {{ price_unit }} )</span></th>
+                <th style="color: white;">Montant Payé <span style="font-size: 10px;">( {{ price_unit }} )</span></th>
+
+                <th style="color: white;">Addresse Email</th>
+                <th style="color: white;">Téléphone</th>
+                <th style="color: white;">Autre Téléphone</th>
+                <th style="color: white;">address</th>
+                <th style="color: white;">Pays</th>
+                <th style="color: white;">Ville</th>
+                <th style="color: white;">Entreprise</th>
+                <th style="color: white;">Date vente</th>
+                <!-- <th style="color: white;">Entreprise de vente</th> -->
+                <th data-exclude="true" style="color: white;">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody class="table-border-bottom-0">
+              {% for sale in sales %} 
+              <tr>
+                <td>
+                  {% if sale.status and sale.status.id %}
+                  <!-- 'id': 'paid', 'name': 'Payé', 'class': 'success' -->
+                  <span class="badge bg-label-{{ sale.status.class }} me-1">{{ sale.status.name }}</span>
+                  {% endif %}
+                </td>
+                <td>{% if sale.client.full_name %}<strong>{{ sale.client.full_name }}</strong>{% endif %}</td>
+                <td>{% if sale.discount %}{{ sale.discount|floatformat:0|separate_millier:"" }}{% endif %}</td>
+                <td>{% if sale.tax_amount %}{{ sale.tax_amount|floatformat:0|separate_millier:"" }}{% endif %}</td>
+                <td>{% if sale.ht_amount %}{{ sale.ht_amount|floatformat:0|separate_millier:"" }}{% endif %}</td>
+                <td>{% if sale.ttc_amount %}{{ sale.ttc_amount|floatformat:0|separate_millier:"" }}{% endif %}</td>
+                <td>{% if sale.payments_amount %}{{ sale.payments_amount|floatformat:0|separate_millier:"" }}{% endif %}</td>
+
+                <td>{% if sale.client.email %}{{ sale.client.email }}{% endif %}</td>
+                <td>{% if sale.client.phone_number %}{{ sale.client.phone_number }}{% endif %}</td>
+                <td>{% if sale.client.phone_number_other %}{{ sale.client.phone_number_other }}{% endif %}</td>
+                <td>{% if sale.client.address %}{{ sale.client.address }}{% endif %}</td>
+                <td>{% if sale.client.country %}{{ sale.client.country }}{% endif %}</td>
+                <td>{% if sale.client.city %}{{ sale.client.city }}{% endif %}</td>
+                <td>{% if sale.client.company %}{{ sale.client.company }}{% endif %}</td>
+                <td>{% if sale.date %}{{ sale.date }}{% endif %}</td>
+                <!-- <td>{% if sale.country and sale.country.name %}sale.country.name{% endif %}</td> -->
+
+                <td data-exclude="true">
+                  {% if  request.user|can_create_payment or request.user|can_make_print or request.user|can_view_sale or request.user|can_delete_sale %}
+                    <div class="dropdown">
+                        <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                          <i style="font-size: 25px;" class="bx bx-dots-vertical-rounded"></i>
+                        </button>
+
+                        <div class="dropdown-menu">
+                            {% if not sale.is_paid and request.user|can_create_payment %}
+                              <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminMakeSaleForRestModal" data-id="{{ sale.id }}">
+                                <i class="bx bx-money me-1"></i> Effectué un paiement
+                              </button>
+                            {% endif %}
+
+                            {% if  request.user|can_make_print %}
+                              <form method="POST" action="{% url 'print_sale' sale.id %}" target="_blank">
+                                {% csrf_token %} 
+                                <button type="submit" class="dropdown-item" id="adminPrintSaleModal">
+                                  <i class="bx bx-printer me-1"></i> Imprimer une facture
+                                </button>
+                              </form>
+                            {% endif %}
+
+                            {% if  request.user|can_make_print %}
+                              <form method="POST" action="{% url 'delivery_slip' sale.id %}" target="_blank">
+                                {% csrf_token %} 
+                                <button type="submit" class="dropdown-item" id="adminBonLivraisonModal">
+                                <i class="bx bx-detail me-1"></i> Imprimer le Bon de Livraison
+                                </button>
+                              </form>
+                            {% endif %}
+
+                            {% if  request.user|can_view_sale %}
+                              <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminSaleDetailModal" data-items="{{ sale.itemsToMap }}" data-payments="{{ sale.paymentsToMap }}">
+                                <i class="bx bx-edit-alt me-1"></i> Détails Vente
+                              </button>
+                            {% endif %}
+
+                            {% if  request.user|can_delete_sale %}
+                              <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminDeleteSaleModal" data-id="{{ sale.id }}">
+                                <i class="bx bx-trash me-1"></i>  Supprimer
+                              </button>
+                            {% endif %}
+                      </div>
+                    </div>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+
+            {% if hasSales %}
+              <tr style="background-color: rgb(243, 243, 243);">
+                <th style="font-size: 15px; text-align: center;" colspan="2"> TOTAL</th>
+                <th style="font-size: 15px;">{% if total_discount %}{{ total_discount|floatformat:0|separate_millier:"" }}{% endif %}</th>
+                <th style="font-size: 15px;">{% if total_tax_amount %}{{ total_tax_amount|floatformat:0|separate_millier:"" }}{% endif %}</th>
+                <th style="font-size: 15px;">{% if total_ht_amount %}{{ total_ht_amount|floatformat:0|separate_millier:"" }}{% endif %}</th>
+                <th style="font-size: 15px;">{% if total_ttc_amount %}{{ total_ttc_amount|floatformat:0|separate_millier:"" }}{% endif %}</th>
+                <th style="font-size: 15px;">{% if total_payments_amount %}{{ total_payments_amount|floatformat:0|separate_millier:"" }}{% endif %}</th>
+                <th colspan="9"></th>
+              </tr>
+              {% endif %}
+            </tbody>
+          {% else %}
+              <tr data-exclude="true">
+                <th data-exclude="true" colspan="14" style="color:brown; font-weight: bold;">Pas de données disponible pour ce filter</th>
+              </tr>
+          {% endif %}
+
+      </table>
+    </div>
+    </div>
+    <div class="overlay"></div>
+  {% endif %}
+{% endblock %} 
+
+
+{% block modalsBlock %}
+
+    <div class="modal fade" id="adminMakeSaleForRestModal" data-bs-backdrop="static" tabindex="-1">
+      <div class="modal-dialog">
+        <form  id="adminMakeSaleForRestFormModal" method="POST" action="" class="form modal-content" enctype="multipart/form-data">
+
+          <div class="modal-header">
+            <h5 class="modal-title" id="adminMakeSaleForRestModalTitle">Effectuer un paiement de ce produit</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+
+          <div class="modal-body">
+            {% csrf_token %} 
+
+              <div id="client-payment-status-block" class="mb-3">
+                  <label class="form-label" for="client-payment-status">Type de paiement <b class="field-required"> *</b></label>
+                  <div class="input-group input-group-merge">
+                    <span class="input-group-text"><i class="bx bx-diamond"></i></span>
+                    <select style="font-weight: bold;" name="client_payment_status" id="client-payment-status" required="required" class="form-select">
+                        <option value=""></option>
+                        <option value="paid_in_total">Payement du reste</option>
+                        <option value="paid_in_part">Payé en partie</option>
+                    </select>
+                  </div>
+              </div>
+
+              <div id="client-payment-amount-block" class="mb-3">
+                  <label class="form-label" for="client-phone">Montant payé <b class="field-required">*</b></label>
+                  <div class="input-group input-group-merge">
+                    <span class="input-group-text"><i class="bx bx-money"></i></span>
+                    <input id="client-payment-amount" required="required" type="number" inputmode="numeric"pattern="[0-9]*" name="client_payment_amount" value="" min="1" placeholder="Montant Payé par le client" class="form-control" />
+                  </div>
+              </div>
+
+              <div id="client-payment-method-block" class="mb-3">
+                  <label class="form-label" for="client-payment-method">Méthode de paiement <b class="field-required"> *</b></label>
+                  <div class="input-group input-group-merge">
+                    <span class="input-group-text"><i class="bx bx-mouse"></i></span>
+                    <select style="font-weight: bold;" required="required" name="client_payment_method" id="client-payment-method" class="form-select">
+                        <option value=""></option>
+                        <option value="cash">Espèces</option>
+                        <option value="card">Carte Bancaire</option>
+                        <option value="transfer">Virement</option>
+                    </select>
+                  </div>
+              </div>
+
+              <div id="payment-date-block" class="mb-3">
+                  <label for="payment-date" class="form-label">Date du paiement <b class="field-required"> *</b></label>
+                  <div class="input-group input-group-merge">
+                    <span class="input-group-text"><i class="bx bx-calendar"></i></span>
+                    <input name="payment_date" class="form-control" required="required" type="datetime-local" value="{% now 'Y-m-d\TH:i' %}" id="payment-date" />
+                  </div>
+              </div>
+
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button id="adminMakeSaleForRestSubmitBtnModal" type="submit" class="btn btn-primary">Effectuer le paiement</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+
+
+     <div class="modal fade" id="adminSaleDetailModal" data-bs-backdrop="static" tabindex="-1">
+       <div class="modal-dialog modal-xl">
+          <div class="modal-content">
+
+           <div class="modal-header">
+             <h5 class="modal-title" id="adminSaleDetailModalTitle"></h5>
+             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+           </div>
+
+           <div class="modal-body">
+
+              <div class="table-responsive text-nowrap">
+                <table class="table">
+                  <thead class="table-dark">
+                    <tr style="padding: 0px;">
+                      <th style="padding: 0px; text-align: center; font-size: 20px; color:white" colspan="6">Détails Ventes</th>
+                    </tr>
+                    <tr>
+                      <th style="font-size: 14px; color:white">Image</th>
+                      <th style="font-size: 14px; color:white">Nom Produit</th>
+                      <th style="font-size: 14px; color:white">Quantité</th>
+                      <th style="font-size: 14px; color:white">PU.</th>
+                      <th style="font-size: 14px; color:white">Montant</th>
+                      <th style="font-size: 14px; color:white">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="datailSaleItemsList"></tbody>
+                </table>
+
+                <br>
+
+                <table class="table">
+                  <thead class="table-dark">
+                    <tr style="padding: 0px;">
+                      <th style="padding: 0px; text-align: center; font-size: 20px; color:white" colspan="4">Détails Paiements</th>
+                    </tr>
+                    <tr>
+                      <th style="font-size: 14px; color:white">Montantt</th>
+                      <th style="font-size: 14px; color:white">Methode</th>
+                      <th style="font-size: 14px; color:white">date</th>
+                      <th style="font-size: 14px; color:white">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="datailSalePaymentList"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+           </div>
+
+         </div>
+       </div>
+     </div>
+
+    <div class="modal fade" id="adminDeleteSaleModal" data-bs-backdrop="static" tabindex="-1">
+      <div class="modal-dialog">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title">Suppression de vente</h5>
+                  <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
+              </div>
+              <div class="modal-body">
+                  <label for="nameBackdrop" class="form-label">
+                    Êtes-vous sûr de vouloir supprimer cette vente ?
+                  </label>
+              </div>
+              <div class="modal-footer">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                      Annuler
+                  </button>
+
+                  <form id="delete-form" action="" method="post">
+                      {% csrf_token %}
+                      <input type="hidden" name="sale_action" value="delete">
+                      <button type="submit" class="btn btn-danger">Oui, supprimer</button>
+                  </form>
+              </div>
+          </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="adminDeleteSaleItemsModal" data-bs-backdrop="static" tabindex="-1">
+      <div class="modal-dialog">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title">Retirer un élément de la vente</h5>
+                  <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
+              </div>
+              <div class="modal-body">
+                  <label for="nameBackdrop" class="form-label">
+                    Êtes-vous sûr de vouloir retirer cet article de la vente?
+                  </label>
+              </div>
+              <div class="modal-footer">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                      Fermer
+                  </button>
+
+                  <form id="delete-item-form" action="" method="post">
+                      {% csrf_token %}
+                      <input type="hidden" name="sale_action" value="delete-sale-item">
+                      <button type="submit" class="btn btn-danger">Oui, Retirer de la vente</button>
+                  </form>
+              </div>
+          </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="adminDeleteSalePaymentsModal" data-bs-backdrop="static" tabindex="-1">
+      <div class="modal-dialog">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 class="modal-title">Annuler un paiement de vente</h5>
+                  <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
+              </div>
+              <div class="modal-body">
+                  <label for="nameBackdrop" class="form-label">
+                    Êtes-vous sûr de vouloir annuler ce paiement ?
+                  </label>
+              </div>
+              <div class="modal-footer">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                      Fermer
+                  </button>
+
+                  <form id="delete-payment-form" action="" method="post">
+                      {% csrf_token %}
+                      <input type="hidden" name="sale_action" value="delete-sale-payment">
+                      <button type="submit" class="btn btn-danger">Oui, Annuler le paiement</button>
+                  </form>
+              </div>
+          </div>
+      </div>
+    </div>
+{% endblock %}
+
+{% block postloadjs %} 
+{{ block.super }}
+<script>
+   $("#new-image").change(function () {
+       let file = $("#new-image")[0].files[0];
+       $("#filename").text(`Image will be set to: ${file.name}`);
+   });
+
+// ###############################################
+
+  // $("#adminPrintSaleModal").click(function (e) {
+  //   e.preventDefault();
+  //     const saleId = $(this).data('data-id');  // ou une autre méthode pour obtenir le saleId dynamiquement
+  //     const actionUrl = `{#% url 'print_sale' 0 %#}`.replace('/0/', `/${saleId}/`);
+  //     window.location.href = actionUrl;
+  // });
+
+// ###############################################
+
+  //  $("#adminBonLivraisonModal").click(function (e) {
+  //     e.preventDefault();
+  //      // On récupère l'ID de la vente (saleId) d'une source dans la page (par ex. data-attribute ou une variable)
+  //      const saleId = $(this).data('data-id');  // ou une autre méthode pour obtenir le saleId dynamiquement
+       
+  //      // Créer l'URL d'action
+  //     //  const actionUrl = `{#% url 'delivery_slip' 0 % #}`.replace('/0/', `/${saleId}/`);
+  //      const actionUrl = `{#% url 'delivery_slip' %#}`;
+
+  //      // Naviguer vers l'URL actionUrl
+  //      window.location.href = actionUrl;
+  //  });
+
+// ###############################################
+
+  document.addEventListener('DOMContentLoaded', function () {
+
+  const makeSaleForRestModal = document.getElementById('adminMakeSaleForRestModal');
+  const makeSaleForRestForm = document.getElementById('adminMakeSaleForRestFormModal');
+  makeSaleForRestModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget; // Button that triggered the modal
+      const saleId = button.getAttribute('data-id');
+      const actionUrl = `{% url 'make_rest_payment' 0 %}`.replace('/0/', `/${saleId}/`);
+      makeSaleForRestForm.setAttribute('action', actionUrl);
+  });
+
+
+// ###############################################
+      const deleteModal = document.getElementById('adminDeleteSaleModal');
+      const deleteForm = document.getElementById('delete-form');
+      deleteModal.addEventListener('show.bs.modal', function (event) {
+          const button = event.relatedTarget; // Button that triggered the modal
+          const saleId = button.getAttribute('data-id');
+          const actionUrl = `{% url 'admin_delete_sale' 0 %}`.replace('/0/', `/${saleId}/`);
+          deleteForm.setAttribute('action', actionUrl);
+      });
+
+      // ###############################################
+
+      const deleteItemModal = document.getElementById('adminDeleteSaleItemsModal');
+      const deleteItemForm = document.getElementById('delete-item-form');
+      deleteItemModal.addEventListener('show.bs.modal', function (event) {
+          const button = event.relatedTarget; // Button that triggered the modal
+          const itemId = button.getAttribute('data-id');
+          const actionUrl = `{% url 'admin_delete_sale_item' 0 %}`.replace('/0/', `/${itemId}/`);
+          deleteItemForm.setAttribute('action', actionUrl);
+      });
+
+    // ###############################################
+
+      const deletePayModal = document.getElementById('adminDeleteSalePaymentsModal');
+      const deletePayForm = document.getElementById('delete-payment-form');
+      deletePayModal.addEventListener('show.bs.modal', function (event) {
+          const button = event.relatedTarget; // Button that triggered the modal
+          const paymentId = button.getAttribute('data-id');
+          const actionUrl = `{% url 'admin_delete_sale_payment' 0 %}`.replace('/0/', `/${paymentId}/`);
+          deletePayForm.setAttribute('action', actionUrl);
+      });
+
+    // ###############################################
+      
+      const saleDetailModal = document.getElementById('adminSaleDetailModal');
+      const datailSaleItemsList = document.getElementById('datailSaleItemsList');
+      const datailSalePaymentList = document.getElementById('datailSalePaymentList');
+      saleDetailModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+          const items = JSON.parse(button.getAttribute('data-items'));
+          const payments = JSON.parse(button.getAttribute('data-payments'));
+          let itemsHtml = '';
+          let paymentsHtml = '';
+
+          if(items.length > 0){
+            for (const i of items) {
+              let product = JSON.parse(i.product);
+              html1Table = `<tr>\n`+
+                              `<td><img style="height: 30px; max-width: 60px;" class="" src="${product.imageUrl}" alt="${product.name}"></td>\n`+
+                              `<td>${product.name}</td>\n`+
+                              `<td>${i.quantity}</td>\n`+
+                              `<td>${i.price}</td>\n`+
+                              `<td>${i.amount}</td>\n`+
+                              `<td><div class="dropdown">\n` +
+                                    `<button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">\n` +
+                                      `<i style="font-size: 25px;" class="bx bx-dots-vertical-rounded"></i>\n` +
+                                    `</button>\n` +
+
+                                    `<div class="dropdown-menu">\n` +
+                                      `<button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminDeleteSaleItemsModal" data-id="${i.id}">\n` +
+                                      `<i class="bx bx-trash me-1"></i>  Supprimer\n` +
+                                    `</button>\n` +
+                                  `</div>\n` +
+                                `</div>\n` +
+                              `</td>\n`+
+                            `</tr>\n`;
+              itemsHtml += html1Table
+            }
+          
+          } else {
+            itemsHtml = `<tr><th style="text-align: center; font-size: 20px; color:orange;" colspan="5">Pas d'article disponible</th></tr>`;
+          }
+
+          if(payments.length > 0){
+            for (const p of payments) {
+                html2Table = `<tr>\n` +
+                                `<td>${p.amount}</td>\n` +
+                                `<td>${p.method}</td>\n` +
+                                `<td>${p.date}</td>\n` +
+                                `<td><div class="dropdown">\n` +
+                                      `<button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">\n` +
+                                        `<i style="font-size: 25px;" class="bx bx-dots-vertical-rounded"></i>\n` +
+                                      `</button>\n` +
+
+                                      `<div class="dropdown-menu">\n` +
+                                        `<button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminDeleteSalePaymentsModal" data-id="${p.id}">\n` +
+                                        `<i class="bx bx-trash me-1"></i>  Supprimer\n` +
+                                      `</button>\n` +
+                                    `</div>\n` +
+                                  `</div>\n` +
+                                `</td>\n`+
+                              `</tr>\n`;
+                paymentsHtml += html2Table
+            }
+          
+          } else {
+            paymentsHtml = `<tr><th style="text-align: center; font-size: 20px; color:orange;" colspan="5">Pas de paiement éffectué</th></tr>`;
+          }
+
+          
+          datailSaleItemsList.innerHTML = itemsHtml;
+          datailSalePaymentList.innerHTML = paymentsHtml;
+      });
+  });
+</script>
+
+
+
+{% endblock %}

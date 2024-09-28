@@ -1,0 +1,207 @@
+{% load static %}
+{% load custom_filters %}
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bordereau de Livraison</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0px 40px 0px 40px;
+            color: #333;
+            background-color: #fff;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 0px;
+        }
+        .header img {
+            max-height: 150px;
+            margin-bottom: 0px;
+        }
+        .header .logo-div {
+            height: 100px;
+        }
+        .header h3 {
+            font-size: 18px;
+            margin-bottom: 0px;
+        }
+        .header p {
+            font-size: 14px;
+        }
+        .section {
+            margin-bottom: 20px;
+            margin-top: 5px;
+        }
+        .company-details, .client-details {
+            display: inline-block;
+            width: 48%;
+            vertical-align: top;
+        }
+        .client-details {
+            text-align: right;
+        }
+        .details {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f8f8;
+        }
+        .total {
+            text-align: right;
+            margin-top: 20px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            font-size: 12px;
+            color: #777;
+        }
+        .buttons {
+            margin-top: 20px;
+            text-align: right;
+        }
+        .buttons a, .buttons button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+        }
+        .buttons button {
+            background-color: #2196F3;
+        }
+        .signature {
+            margin-top: 50px;
+        }
+
+        textarea, input {
+            border: transparent 1px solid;
+            margin: 0px;
+            height: 30px;
+            background-color: transparent;
+            color: black;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo-div">
+            <img src="data:image/png;base64,{{ base64_string }}" alt="KnelCare" class="company-logo" />
+        </div>
+        
+        <h3>Bon de Livraison N°: <strong>#{{ sale.id }}</strong></h3>
+        <p>Date: <strong>{{ date }}</strong></p>
+    </div>
+
+    <div class="section">
+        {% for page_items in items_pages %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Article</th>
+                        <th>Quantité</th>
+                        <th>Observation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in page_items %}
+                    <tr>
+                        <td>{{ item.product.name }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td style="padding: 0px">
+                            <form action="{% url 'update_sale_item' item.id %}" method="post">
+                                {% csrf_token %} 
+                            <input name="observation" value="{{ item.observation }}" type="text">
+                            <!-- <textarea  name="observation" rows="2">{#{ item.observation }#}</textarea> -->
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endfor %}
+    </div>
+
+
+
+    <div class="section">
+        <div class="company-details details">
+            <p>
+                <strong>{{ app_site.name }}</strong><br>
+                {% if app_site.address %}
+                    Adresse: {{ app_site.address }}<br>
+                {% endif %}
+                Téléphone: {{ app_site.phone_number }} {% if app_site.phone_number_other %} | {{ app_site.phone_number_other }} {% endif %}<br>
+                Email : {{ app_site.email }}
+            </p>
+            <br>
+            <p><strong>Expéditeur</strong></p>
+            <br>
+            <p>Signature : _____________________</p>
+        </div>
+        <div class="client-details details">
+            <p>
+                {% if sale.client and sale.client.company %}
+                    <strong>{{ sale.client.company }}</strong><br>
+                {% endif %}
+                <strong>{{ sale.client.full_name }}</strong><br>
+                {% if sale.client and sale.client.address %}
+                    Adresse: {{ sale.client.address }}<br>
+                {% endif %}
+                Téléphone : {{ sale.client.phone_number  }}<br>
+                Email : {{ sale.client.email  }}
+            </p>
+            <br>
+            <p><strong>Destinataire</strong></p>
+            <br>
+            <p>Signature : _____________________</p>
+        </div>
+    </div>
+
+    <!-- <div class="buttons">
+        <a href="?format=pdf">Télécharger PDF</a>
+        <button onclick="window.print()">Imprimer</button>
+    </div> -->
+
+    <div class="footer">
+        <p style="padding: 0px; margin: 3px;">Merci pour votre confiance et votre achat chez {{ app_site.name }} !</p>
+        <p style="padding: 0px; margin: 3px;">{{ app_site.domain }} | {{ app_site.email }} | {{ app_site.phone_number }}{% if app_site.phone_number_other %} | {{ app_site.phone_number_other }}{% endif %}</p>
+        <p style="padding: 0px; margin: 3px;">{% if app_site.address %} {{ app_site.address }}{% endif %}</p>
+        
+    </div>
+
+    <script>
+        const format = '{{ output_format }}';
+        if (format == 'pdf') {
+            window.location.href = `?format=pdf`;
+        } else if (format == 'print') {
+            // Imprimer
+            window.print()
+        } else {
+            window.print()
+        }
+    </script>
+
+</body>
+</html>

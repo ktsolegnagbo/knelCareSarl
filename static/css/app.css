@@ -1,0 +1,93 @@
+@charset "UTF-8";
+
+/* @font-face {
+	font-family: 'gothic';
+	src: url('.assets/fonts/gothics');
+} */
+
+
+#flash-template {
+	font-family: "Times Roman","Century Gothic",sans-serif;
+	position: fixed;
+	top: 10%;
+	right: 1%;
+	font-weight: bold;
+	width: auto;
+	z-index: 9999999999999999999;
+}
+
+
+/* @media only screen and (max-width: 798px) {
+	#flash-template {
+		font-family: Arial, sans-serif;
+		font-weight: bold;
+		position: fixed;
+		top: 5%;
+		right: 0%;
+	}
+} */
+
+.asteriskField {
+    color: red;
+    font-size: 14px;
+    margin-left: 8px;
+ }
+ 
+.decrement-qty,
+.increment-qty,
+.discount-price {
+    border: 1px solid rgb(212, 212, 212) !important;
+}
+
+.decrement-qty strong,
+.increment-qty strong {
+    font-size: 16 !important;
+}
+
+.shopping-has-amount {
+    background-color: rgb(210, 255, 210);
+    color: green;
+    font-weight: bold;
+}
+
+.shopping-no-amount {
+    background-color: none;
+    color: none;
+    font-weight: 100;
+}
+
+.app-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0px;
+    margin: 5px 0px 5px 0px ;
+    width: 100%;
+    height: auto;
+}
+
+.app-logo .nav-link {
+    display: inline-block;
+    text-decoration: none;
+    padding: 0px;
+    margin: 0px;
+}
+
+.app-logo img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 1px dashed #dc3545;
+    padding: 0px;
+    margin: 0px;
+    transition: transform 0.3s;
+}
+
+.app-logo img:hover {
+    transform: scale(1.05);
+}
+
+label.form-label {
+    margin-bottom: 0px !important;
+    margin-left: 5px !important;
+}

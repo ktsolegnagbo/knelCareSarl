@@ -1,0 +1,126 @@
+{% load permissions_tags %}
+
+<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+    <div class="app-brand">
+
+        <div class="app-logo app-logo-brand">
+                <a href="{% url 'home' %}" class="app-brand-link">
+                <img src="{{ MEDIA_URL }}logo.png" alt="KnelCare" />
+                </a>
+                <!-- <span class="app-brand-text demo menu-text fw-bolder ms-2">Sneat</span> -->
+         </div>
+
+        <!-- <a href="javascript:void(0);"
+            class="layout-menu-toggle menu-link text-large ms-auto d-block d-xl-none">
+            <i class="bx bx-chevron-left bx-sm align-middle"></i>
+        </a> -->
+    </div>
+
+    <div class="menu-inner-shadow"></div>
+
+    <ul class="menu-inner py-1">
+        <li class="menu-item active">
+            <a href="{% url 'products' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-home-circle"></i>
+                <div data-i18n="Analytics">Articles</div>
+            </a>
+        </li>
+
+        
+        {% if  request.user|is_administrator %}
+            <li class="menu-header small text-uppercase"><span class="menu-header-text">Administration</span></li>
+        {% endif %}
+
+        {% if  request.user|can_view_category and request.user|is_administrator %}
+        <li class="menu-item">
+            <a href="{% url 'admin_list_categories' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-collection"></i>
+                <div data-i18n="Basic">Admin des Categories</div>
+            </a>
+        </li>
+        {% endif %}
+
+        {% if  request.user|can_view_product and request.user|is_administrator %}
+        <li class="menu-item">
+            <a href="{% url 'admin_list_products' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-collection"></i>
+                <div data-i18n="Basic">Admin des Articles</div>
+            </a>
+        </li>
+        {% endif %}
+
+        {% if  request.user|can_view_stock and request.user|is_administrator %}
+        <li class="menu-item">
+            <a href="{% url 'admin_list_stocks' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-collection"></i>
+                <div data-i18n="Basic">Admin des Stock</div>
+            </a>
+        </li>
+        {% endif %}
+
+        {% if  request.user|can_view_client and request.user|is_administrator %}
+        <li class="menu-item">
+            <a href="{% url 'admin_list_clients' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-collection"></i>
+                <div data-i18n="Basic">Admin des Client</div>
+            </a>
+        </li>
+        {% endif %}
+
+        {% if  request.user|can_view_sale and request.user|is_administrator %}
+        <li class="menu-item">
+            <a href="{% url 'admin_list_sales' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-collection"></i>
+                <div data-i18n="Basic">Admin des Ventes</div>
+            </a>
+        </li>
+        {% endif %}
+
+        {% if  request.user|can_view_employee and request.user|is_administrator %}
+        <li class="menu-item">
+            <a href="{% url 'admin_list_users' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-collection"></i>
+                <div data-i18n="Basic">Admin des Users</div>
+            </a>
+        </li>
+        {% endif %}
+
+        {% if  request.user|can_view_payroll and request.user|is_administrator %}
+        <li class="menu-item">
+            <a href="{% url 'admin_list_payrolls' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-collection"></i>
+                <div data-i18n="Basic">Admin des Salaires</div>
+            </a>
+        </li>
+        {% endif %}
+
+        {% if  request.user|can_see_dashboard %}
+            <li class="menu-header small text-uppercase"><span class="menu-header-text">Tableau de bord</span></li>
+        {% endif %}
+
+        {% if  request.user|can_view_payroll and request.user|is_administrator and request.user|can_see_dashboard %}
+        <li class="menu-item">
+            <a href="{% url 'payroll_dashboard' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bxs-dashboard"></i>
+                <div data-i18n="Basic">Salaires Dashboard</div>
+            </a>
+        </li>
+        {% endif %}
+
+        {% if  request.user|can_view_sale and request.user|is_administrator and request.user|can_see_dashboard %}
+        <li class="menu-item">
+            <a href="{% url 'sale_dashboard' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bxs-dashboard"></i>
+                <div data-i18n="Basic">Ventes Dashboard</div>
+            </a>
+        </li>
+        {% endif %}
+
+        <!-- <li class="menu-item">
+            <a href="{#% url 'user_permissions' %#}" class="menu-link">
+                <i class="menu-icon tf-icons bx bxs-dashboard"></i>
+                <div data-i18n="Basic">Permissions</div>
+            </a>
+        </li> -->
+    </ul>
+</aside>

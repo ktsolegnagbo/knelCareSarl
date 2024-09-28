@@ -1,0 +1,669 @@
+{% extends 'app-base.html' %}
+{% load permissions_tags %}
+{% load custom_filters %}
+{% load static %}
+
+{% block title %}KnelCare-Auth{% endblock %}
+
+{% block content %}
+   {% if  request.user|can_view_sale or request.user|can_create_sale or request.user|can_update_sale %}
+      <div class="overlay"></div>
+      <div class="container mt-lg-2 footer-down">
+         <div class="row mb-2">
+            <div style="display: flex;" class="col">
+               <a style="display: flex; align-items: center; color: white; text-align: center; margin: 0px 20px 5px 0px; padding: 2px 8px 2px 8px; height: 30px;"
+                  href="{% url 'products' %}" class="btn border-dark bg-primary">
+                  <span>
+                     <i class="fas fa-chevron-left"></i>
+                  </span>
+                  <span style="font-size: 12px; margin-left: 5px;" class="text-uppercase"> Retour Aux Articles</span>
+               </a>
+               <h4 class="site-header text-uppercase font-weight-bold mb-4 text-center">
+                  Liste des choix à vendre
+               </h4>
+               <hr />
+            </div>
+         </div>
+         <div class="row">
+            <div class="col">
+               {% if shopping_items %}
+
+               <div class="row">
+                  <div class="col-md-6 mb-3">
+                     <strong>Faire une remise:</strong>
+                     <form id="discount-price-form" style="margin-bottom: 3px;" class="form update-form" method="POST" action="">
+                        {% csrf_token %}
+                        <div class="form-group" style="width: 250px;">
+                           <div class="input-group input-group-merge">
+                              <input style="text-align: center; font-size: 16px; "
+                                 class="discount-input form-control form-control-sm qty_input" type="text" inputmode="numeric"
+                                 pattern="[0-9]*" name="discount" value="{{ discount|floatformat:0|separate_millier }}"
+                                 data-amount="{{ discount|floatformat:0|separate_millier }}" min="0" id="discount-price" />
+
+                              <span style="padding-left: 0px;padding-right: 5px;" id="basic-icon-default-company2"
+                                 class="discount-input-price-unit input-group-text">{{ price_unit }}</span>
+
+                              <button style="border: 1px solid red!important; font-size: 16px; visibility: hidden;"
+                                 class="discount-price text-danger btn btn-sm" id="discount-price-btn">
+                                 Valider
+                              </button>
+                           </div>
+                        </div>
+                     </form>
+                  </div>
+
+                  <div class="col-md-6 mb-3">
+                     <h6 class="mb-2">Montant HT: <strong>{{ totalHT|floatformat:0|separate_millier }}</strong> {{ price_unit }}</h6>
+                     <h6 class="mb-2">Remise: <strong>{{ discount|floatformat:0|separate_millier }}</strong> {{ price_unit }}</h6>
+                     <h6 class="mb-2">Total HT à payer: <strong>{{ totalGlobalHT|floatformat:0|separate_millier }}</strong> {{ price_unit }}</h6>
+                  </div>
+               </div>
+
+
+               <div class="row">
+                  <div class="col-12 col-lg-8 order-lg-last mb-5">
+                     <div class="card table-responsive rounded">
+                        <table class="table table-sm table-borderless">
+
+                           <thead class="table-dark">
+                              <tr>
+                                 <th style="font-size: 14px; color: white;" scope="col" class="text-center">Info de l'article
+                                 </th>
+                                 <th style="font-size: 14px; color: white;" scope="col">Prix ({{ price_unit }})</th>
+                                 <th style="font-size: 14px; color: white;" scope="col">Quantité</th>
+                                 <th style="font-size: 14px; color: white;" scope="col">Montant</th>
+                                 <th style="font-size: 14px; color: white;" scope="col">Actions</th>
+                              </tr>
+                           </thead>
+
+                           <tbody class="table-border-bottom-0">
+                              {% for item in shopping_items %}
+                              <tr>
+                                 <td style="display: flex; align-items: center;">
+                                    <img style="height: 40px; max-width: 90px;" class="" src="{{ item.product.imageUrl }}" alt="{{ item.product.name }}">
+                                    <p style="width: 10px;"></p>
+                                    <h6 class="my-0"><strong>{{ item.product.name }}</strong></h6>
+                                 </td>
+                                 <td>{{ item.product.price|floatformat:0|separate_millier }}</td>
+                                 <td style="width: 200px!important; padding: 0px;">
+                                    <form style="margin-bottom: 3px;" class="form update-form" method="POST"
+                                       action="{% url 'adjust_shopping_quantity' item.item_id %}">
+                                       {% csrf_token %}
+                                       <div class="form-group">
+                                          <div style="min-width: 120px; align-items: center; text-align: center;" class="input-group">
+                                             <input id="input_{{ item.item_id }}" type="text" inputmode="numeric"
+                                                pattern="[0-9]*" name="quantity" value="{{ item.quantity }}"
+                                                data-quantity="{{ item.quantity }}" min="1" max="99"
+                                                style="width: 50px; border-radius: 1px!important; text-align: center; font-size: 16px; padding: 0px; "
+                                                class="qty-input form-control form-control-sm " />
+                                             <div class="input-group-append">
+                                                <button id="update_{{ item.item_id }}" type="submit"
+                                                   style="height: 34px; padding-left: 15px; padding-right: 15px; border-radius: 1px!important; border: 1px solid red; cursor: pointer; visibility: hidden;"
+                                                   class="update-item text-danger btn btn-sm">
+                                                   <span><i class="fas fa-edit"></i> </span>
+                                                </button>
+                                             </div>
+                                          </div>
+                                       </div>
+                                    </form>
+                                 </td>
+                                 <td>
+                                    {{ item.product.price | calc_subtotal:item.quantity|floatformat:0|separate_millier }}
+                                 </td>
+                                 <td>
+                                    <div class="dropdown">
+                                       <button type="button" class="btn p-0 dropdown-toggle hide-arrow"
+                                          data-bs-toggle="dropdown">
+                                          <i style="font-size: 25px;" class="bx bx-dots-vertical-rounded"></i>
+                                       </button>
+                                       <div class="dropdown-menu">
+                                          <!-- <a class="dropdown-item" href="">
+                                             <i class="bx bx-edit-alt me-1"></i> Modifier
+                                          </a> -->
+
+                                          <a style="cursor: pointer;" class="remove-item text-danger dropdown-item"
+                                             id="remove_{{ item.item_id }}">
+                                             <small><i class="fas fa-times-circle"></i> Supprimer</small>
+                                          </a>
+                                       </div>
+                                    </div>
+                                 </td>
+                              </tr>
+                              {% endfor %}
+                           </tbody>
+
+                        </table>
+                     </div>
+                  </div>
+                  <div class="col-12 col-lg-4">
+                     <div class="col-xl">
+                        <div class="card mb-4">
+                           <div class="card-header d-flex justify-content-between align-items-center">
+                              <h5 class="mb-0">Informations du client</h5>
+                              <small class="text-muted float-end">Associé à cette vente</small>
+                           </div>
+                           <div class="card-body">
+                              <form id="clientForm" method="post" action="" class="form mb-2 sale-form">
+                                 {% csrf_token %}
+
+                                 <div style="display: flex; align-items: center;" class="mb-3">
+                                    <div style="width: 100%;">
+                                       <label class="form-label" for="sale-client">Choisir le client <b
+                                             class="field-required">*</b></label>
+                                       <div class="input-group input-group-merge">
+                                          <span class="input-group-text"><i class="bx bx-user"></i></span>
+                                          <select style="font-weight: bold;" name="sale_client" id="sale-client" class="form-select">
+                                             <optgroup style="color: blue; font-size: 14px;">
+                                                <option value=""></option>
+                                                <option value="new_client">Nouveau Client</option>
+                                             </optgroup>
+                                             
+                                             <optgroup style="color: green; font-size: 14px;">
+                                                {% for client in clients %}
+                                                   <option value="{{ client.id }}">{{ client.full_name }}</option>
+                                                {% endfor %}
+                                             </optgroup>
+                                          </select>
+                                       </div>
+                                    </div>
+                                    <!-- <div style="margin-left: 10px;">
+                                       <br>
+                                       <a href="#" target="_blank" rel="noopener noreferrer">
+                                          <i style="font-size: 30px; font-weight: bold; color: green;" class="bx bx-plus"></i>
+                                       </a>
+                                    </div> -->
+                                 </div>
+
+                                 <div id="create-update-user-block" style="display: none;" class="mb-3">
+                                    <div class="form-check">
+                                       <input id="create-update-user" class="form-check-input" type="checkbox" name="create_update_user" />
+                                       <label id="create-update-user-label" class="form-check-label" for="create-update-user"></label>
+                                    </div>
+                              </div>
+
+                                 <div id="client-first-name-block" class="mb-3">
+                                    <label class="form-label" for="client-first-name">Nom du client</label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bx-buildings"></i></span>
+                                       <input type="text" name="client_first_name" id="client-first-name" class="form-control" value="" placeholder="Entrer le Nom du client" />
+                                    </div>
+                                 </div>
+
+                                 <div id="client-last-name-block" class="mb-3">
+                                    <label class="form-label" for="client-last-name">Prénom du client</label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bx-buildings"></i></span>
+                                       <input type="text" name="client_last_name" id="client-last-name" class="form-control" value="" placeholder="Entrer le Prénom du client" />
+                                    </div>
+                                 </div>
+
+                                 <!-- <div class="mb-3">
+                                    <label for="sale-date" class="form-label">Date et heure de la vente <b
+                                          class="field-required">*</b></label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bx-calendar"></i></span>
+                                       <input name="sale_date" class="form-control" type="datetime-local" value="{% now 'Y-m-d\TH:i' %}" id="client-date" />
+                                    </div>
+                                 </div> -->
+
+                                 <div class="mb-3">
+                                    <label class="form-label" for="client-company">Nom de l'entreprise</label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bx-buildings"></i></span>
+                                       <input type="text" name="client_company" id="client-company" class="form-control" value="" placeholder="Nom de l'entreprise" />
+                                    </div>
+                                 </div>
+
+                                 <div class="mb-3">
+                                    <label class="form-label" for="client-email">Addresse Email du client <b
+                                          class="field-required">*</b></label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bx-envelope"></i></span>
+                                       <input type="text" name="client_email" value="" id="client-email" class="form-control" placeholder="Email du client" />
+                                    </div>
+                                 </div>
+
+                                 <div class="mb-3">
+                                    <label class="form-label" for="client-phone">Numerode téléphone principal <b class="field-required">*</b></label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bx-phone"></i></span>
+                                       <input type="text" name="client_phone_number" value="" id="client-phone" class="form-control phone-mask" placeholder="Numero de téléphone" />
+                                    </div>
+                                 </div>
+
+                                 <div class="mb-3">
+                                    <label class="form-label" for="client-phone-other">Numerode téléphone secondaire</label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bx-phone"></i></span>
+                                       <input type="text" name="client_phone_number_other" value="" id="client-phone-other" class="form-control phone-mask" placeholder="Autre numero de téléphone" />
+                                    </div>
+                                 </div>
+
+                                 <div class="mb-3">
+                                    <label for="client-country" class="form-label">Pays <b
+                                          class="field-required">*</b></label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bxs-city"></i></span>
+                                       <input name="client_country" value="" class="form-control" type="text" id="client-country" placeholder="Pays d'action" />
+                                    </div>
+                                 </div>
+
+                                 <div class="mb-3">
+                                    <label for="client-city" class="form-label">Ville</label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bxs-city"></i></span>
+                                       <input name="client_city" value="" type="text" class="form-control" id="client-city" placeholder="Ville du client" />
+                                    </div>
+                                 </div>
+
+                                 <div class="mb-4">
+                                    <label class="form-label" for="client-address">Addresse du client</label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bx-comment"></i></span>
+                                       <textarea name="client_address" id="client-address" class="form-control" placeholder="Addresse du client"></textarea>
+                                    </div>
+                                 </div>
+
+                                 <!-- START PAIEMENT DU CLIENT -->
+
+                                 <div style="margin-left: 15px; color: brown; display: flex; align-items: center;" class="form-check mb-4">
+                                    <input style="zoom: 1.5;" id="apply-tax" class="form-check-input" type="checkbox" name="apply_tax" />
+                                    <label style="margin-left: 5px; margin-top: 5px; text-align: left; font-size: 16px;" class="form-check-label" for="apply-tax">Appliquer la taxe (TVA)</label>
+                                 </div>
+
+                                 <div id="client-tax-rate-block" style="display: none;" class="mb-3">
+                                    <label style="color: brown;" class="form-label" for="client-tax-rate">Taux à appliquer <b class="field-required"> *</b></label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bx-money"></i></span>
+                                       <select style="font-weight: bold;" name="client_tax_rate" id="client-tax-rate" class="form-select">
+                                          <option value=" "></option>
+                                          {% for country in countries %}
+                                             <option value="{{ country.tax }}">{{ country.name }} ({{ country.tax }} %)</option>
+                                          {% endfor %}
+                                       </select>
+                                    </div>
+                                 </div>
+
+                                 <div id="client-payment-status-block" class="mb-3">
+                                    <label class="form-label" for="client-payment-status">Type de paiement <b class="field-required"> *</b></label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bx-diamond"></i></span>
+                                       <select style="font-weight: bold;" name="client_payment_status" id="client-payment-status" required="required" class="form-select">
+                                          <option value=""></option>
+                                          <option value="paid_in_total">Payé en totalité</option>
+                                          <option value="paid_in_part">Payé en partie</option>
+                                          <option value="unpaid">Non Payé</option>
+                                       </select>
+                                    </div>
+                                 </div>
+
+                                 <div style="display: none;" id="client-payment-amount-block" class="mb-3">
+                                    <label class="form-label" for="client-phone">Montant payé <b class="field-required">*</b></label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bx-money"></i></span>
+                                       <input id="client-payment-amount" type="number" inputmode="numeric"pattern="[0-9]*" name="client_payment_amount" value="" min="1" placeholder="Montant Payé par le client" class="form-control" />
+                                    </div>
+                                 </div>
+
+                                 <div style="display: none;" id="client-payment-method-block" class="mb-3">
+                                    <label class="form-label" for="client-payment-method">Méthode de paiement <b class="field-required"> *</b></label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bx-mouse"></i></span>
+                                       <select style="font-weight: bold;" name="client_payment_method" id="client-payment-method" class="form-select">
+                                          <option value=""></option>
+                                          <option value="cash">Espèces</option>
+                                          <option value="card">Carte Bancaire</option>
+                                          <option value="transfer">Virement</option>
+                                       </select>
+                                    </div>
+                                 </div>
+
+                                 <div style="display: none;" id="payment-date-block" class="mb-3">
+                                    <label for="payment-date" class="form-label">Date du paiement <b class="field-required"> *</b></label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bx-calendar"></i></span>
+                                       <input name="payment_date" class="form-control" type="datetime-local" value="{% now 'Y-m-d\TH:i' %}" id="payment-date" />
+                                    </div>
+                                 </div>
+
+                                 <div style="display: none;" id="payment-due-date-block" class="mb-3">
+                                    <label for="payment-due-date" class="form-label">Date limite du paiement total <b class="field-required"> *</b></label>
+                                    <div class="input-group input-group-merge">
+                                       <span class="input-group-text"><i class="bx bx-calendar"></i></span>
+                                       <input name="payment_due_date" class="form-control" type="datetime-local" value="{% now 'Y-m-d\TH:i' %}" id="payment-due-date" />
+                                    </div>
+                                 </div>
+                                 <!-- END PAIEMENT DU CLIENT -->
+
+                                 <div style="margin: 20px;">
+                                    <div style="color: white; text-align: center;font-size: 14px;" class="row">
+                                       {% if  request.user|can_create_sale and request.user|can_create_payment %}
+                                          <a href="javascript:void(0);" class="btn border-dark btn-primary mb-3" id="make-client-payment">
+                                             <span class="text-uppercase">Enrégistrer la vente</span>
+                                             <span style="margin-left: 5px;"><i class="fas fa-lock"></i></span>
+                                          </a>
+                                       {% endif %}
+         
+                                       <br>
+                                       {% if  request.user|can_make_print %}
+                                          <a href="javascript:void(0);" class="btn border-dark btn-info" id="make-sale-proformat">
+                                             <span class="text-uppercase">Voir la facture proformat</span>
+                                             <span style="margin-left: 5px;"><i class="fas fa-print"></i></span>
+                                          </a>
+                                       {% endif %}
+                                    </div>
+                                 </div>
+                                 <!-- <button type="submit" class="btn btn-primary">Valider la vente à ce client</button> -->
+                              </form>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+
+               {% else %}
+               <p class="lead mb-5">Pas d'article en cours de vente.</p>
+               <a href="{% url 'products' %}" class="btn bg-info border border-dark keep-shopping">
+                  <span class="icon">
+                     <i class="fas fa-chevron-left"></i>
+                  </span>
+                  <span class="text-uppercase font-weight-bold">Retour à la page des produits</span>
+               </a>
+               {% endif %}
+            </div>
+         </div>
+      </div>
+   {% endif %}
+{% endblock %}
+{% block postloadjs %}
+{{ block.super }}
+<script>
+   $('.btt-link').click(function (e) {
+      window.scrollTo(0, 0)
+   })
+
+   // Update quantity on click
+   $(".qty-input").change(function (e) {
+      var itemId = $(this).attr("id").split("input_")[1];
+      var currentQty = parseInt(`${$(this).attr("data-quantity")}`);
+      var changedQty = parseInt(`${$(this).val()}`);
+      if (currentQty == changedQty) {
+         $(`#update_${itemId}`).css('visibility', 'hidden');
+      } else {
+         $(`#update_${itemId}`).css('visibility', 'visible');
+         $(`#input_${itemId}`).css('border', '1px solid red');
+      }
+   });
+
+   // Update discount on change
+   $(".discount-input").change(function (e) {
+      var currentAmount = parseInt(`${$(this).attr("data-amount")}`);
+      var changedAmount = parseInt(`${$(this).val()}`);
+      if (currentAmount == changedAmount) {
+         $(`.discount-price`).css('visibility', 'hidden');
+         border: ;
+      } else {
+         $(`.discount-price`).css('visibility', 'visible');
+         $(`.discount-input`).css('border-top', '1px solid red');
+         $(`.discount-input`).css('border-bottom', '1px solid red');
+         $(`.discount-input`).css('border-left', '1px solid red');
+         $(`.discount-input-price-unit`).css('border-top', '1px solid red');
+         $(`.discount-input-price-unit`).css('border-bottom', '1px solid red');
+      }
+   });
+
+   // Remove item and reload on click
+   $(".remove-item").click(function (e) {
+      var csrfToken = "{{ csrf_token }}";
+      var itemId = $(this).attr("id").split("remove_")[1];
+      var url = `/shopping/remove/${itemId}/`;
+      var data = { csrfmiddlewaretoken: csrfToken };
+
+      $.post(url, data).done(function () {
+         console.log('deleting item form shopping')
+         location.reload();
+      });
+   });
+
+   // Make Client Payment
+   $("#make-client-payment").click(function (e) {
+      e.preventDefault(); // Prevent default behavior
+      var form = $(this).closest(".sale-form"); // Get the closest form element
+      const actionUrl = "{% url 'make_payment' %}"; // Get the URL for client payment
+      // Perform manual validation
+      var isValid = true;
+      form.find('input, select, textarea').each(function() {
+         if ($(this).prop('required') && $(this).val() === '') {
+            isValid = false; // Set isValid to false if a required field is empty
+         }
+      });
+
+      if (isValid) {
+         form.attr('action', actionUrl); // Set the action attribute
+         form.submit(); // Submit the form
+      } else {
+         // Optionally, show an alert or handle invalid form case
+         alert("Veuillez renseiner tous les champs du formulaire.");
+      }
+   });
+
+   // Make Sale Proforma
+   $("#make-sale-proformat").click(function (e) {
+      e.preventDefault(); // Prevent default behavior
+      var form = $(this).closest(".sale-form"); // Get the closest form element
+      const saleId = ''; // Get the sale ID if necessary
+      const actionUrl = "{% url 'print_sale' 0 %}".replace('/0/', `/sale_proformat/`); // Replace with proforma URL
+      // Perform manual validation
+      var isValid = true;
+      form.find('input, select, textarea').each(function() {
+         if ($(this).prop('required') && $(this).val() === '') {
+            isValid = false; // Set isValid to false if a required field is empty
+         }
+      });
+
+      if (isValid) {
+         form.attr('action', actionUrl); // Set the action attribute
+         form.attr('target', '_blank');
+         form.submit(); // Submit the form
+      } else {
+         // Optionally, show an alert or handle invalid form case
+         alert("Veuillez renseiner tous les champs du formulaire.");
+      }
+   });
+
+   $("#apply-tax").change(function (e) {
+      if($(this).is(':checked')){
+         $('#client-tax-rate-block').css('display', 'block');
+         $('#client-tax-rate').val('');
+         $('#client-tax-rate').prop('required', true);
+      } else {
+         $('#client-tax-rate').prop('required', false);
+         $('#client-tax-rate').val('');
+         $('#client-tax-rate-block').css('display', 'none');
+      }
+   });
+
+   $("#client-payment-status").change(function (e) {
+      if ($(this).val() == 'paid_in_total') {
+         $('#client-payment-method-block').css('display', 'block');
+         $('#client-payment-method').val('');
+         $('#client-payment-method').prop('required', true);
+
+         $('#client-payment-date-block').css('display', 'block');
+         $('#client-payment-date').val('');
+         $('#client-payment-date').prop('required', true);
+
+         $('#payment-due-date-block').css('display', 'none');
+         $('#payment-due-date').val('');
+         $('#payment-due-date').prop('required', false);
+
+         $('#payment-date-block').css('display', 'block');
+         $('#payment-date').val(getDateTime());
+         $('#payment-date').prop('required', true);
+
+         $('#client-payment-amount-block').css('display', 'none');
+         $('#client-payment-amount').val('');
+         $('#client-payment-amount').prop('required', false);
+
+      } else if ($(this).val() == 'paid_in_part') {
+         $('#client-payment-method-block').css('display', 'block');
+         $('#client-payment-method').val('');
+         $('#client-payment-method').prop('required', true);
+
+         $('#client-payment-date-block').css('display', 'block');
+         $('#client-payment-date').val('');
+         $('#client-payment-date').prop('required', true);
+
+         $('#payment-due-date-block').css('display', 'block');
+         $('#payment-due-date').val(getDateTime());
+         $('#payment-due-date').prop('required', true);
+
+         $('#payment-date-block').css('display', 'block');
+         $('#payment-date').val(getDateTime());
+         $('#payment-date').prop('required', true);
+
+         $('#client-payment-amount-block').css('display', 'block');
+         $('#client-payment-amount').val('');
+         $('#client-payment-amount').prop('required', true);
+
+      } else if ($(this).val() == 'unpaid') {
+         $('#client-payment-method').prop('required', false);
+         $('#client-payment-method').val('');
+         $('#client-payment-method-block').css('display', 'none');
+
+         $('#client-payment-date').prop('required', false);
+         $('#client-payment-date').val('');
+         $('#client-payment-date-block').css('display', 'none');
+
+         $('#payment-due-date-block').css('display', 'block');
+         $('#payment-due-date').val(getDateTime());
+         $('#payment-due-date').prop('required', true);
+         
+         $('#payment-date').prop('required', false);
+         $('#payment-date').val('');
+         $('#payment-date-block').css('display', 'none');
+         
+         $('#client-payment-amount').prop('required', false);
+         $('#client-payment-amount').val('');
+         $('#client-payment-amount-block').css('display', 'none');
+
+      } else {
+         $('#client-payment-method').prop('required', false);
+         $('#client-payment-method').val('');
+         $('#client-payment-method-block').css('display', 'none');
+
+         $('#client-payment-date').prop('required', false);
+         $('#client-payment-date').val('');
+         $('#client-payment-date-block').css('display', 'none');
+         
+         $('#payment-due-date').prop('required', false);
+         $('#payment-due-date').val('');
+         $('#payment-due-date-block').css('display', 'none');
+         
+         $('#payment-date').prop('required', false);
+         $('#payment-date').val('');
+         $('#payment-date-block').css('display', 'none');
+         
+         $('#client-payment-amount').prop('required', false);
+         $('#client-payment-amount').val('');
+         $('#client-payment-amount-block').css('display', 'none');
+      }
+   });
+
+
+   // Make Client Payment
+   $("#discount-price-btn").click(function (e) {
+      e.preventDefault();
+      var form = $(this).closest(".update-form"); // Get the closest form element
+      const actionUrl = "{% url 'adjust_shopping_discount' %}"; // Get the URL for client payment
+      // Perform manual validation
+      var isValid = true;
+      form.find('input, select, textarea').each(function() {
+         if ($(this).prop('required') && $(this).val() === '') {
+            isValid = false;
+         }
+      });
+
+      if (isValid) {
+         form.attr('action', actionUrl); // Set the action attribute
+         form.submit(); // Submit the form
+      } else {
+         // Optionally, show an alert or handle invalid form case
+         alert("Veuillez renseiner tous les champs du formulaire.");
+      }
+   });
+
+
+   document.addEventListener('DOMContentLoaded', function () {
+      // Get the select element by its ID
+      var clientSelect = document.getElementById('sale-client');
+      // Add an event listener for the 'change' event
+      clientSelect.addEventListener('change', function () {
+         // Get the selected client ID
+         var clientId = clientSelect.value;
+         // Check if a client is selected (i.e., clientId is not empty)
+         if (clientId && clientId != 'new_client' && clientId!='') {
+            loadClientDetails(clientId);
+         } else {
+            updateFields({}, clientId);
+         }
+      });
+   });
+
+   function loadClientDetails(clientId) {
+      // Load client details via AJAX
+      const fetchUrl = "{% url 'admin_clients_details' 0 %}".replace('/0/', `/${clientId}/`);
+      fetch(fetchUrl)
+         .then(response => response.json())
+         .then(data => {
+            updateFields(data.form, clientId)
+         })
+         .catch(error => {
+            console.error('Error:', error);
+         });
+   }
+
+   function updateFields(data = {}, clientId){
+      var createUpdateUserBlock = document.getElementById('create-update-user-block');
+      var createUpdateUserLabel = document.getElementById('create-update-user-label');
+
+      if (clientId && clientId != 'new_client' && clientId!='') {
+         createUpdateUserBlock.style.display = 'block';
+         createUpdateUserLabel.textContent = 'Modifier les informations du client'
+      } else if(clientId == 'new_client') {
+         createUpdateUserBlock.style.display = 'block';
+         createUpdateUserLabel.textContent = 'Créer ce nouveau client'
+      } else {
+         createUpdateUserBlock.style.display = 'none';
+         createUpdateUserLabel.textContent = 'Créer ce nouveau client'
+      }
+
+
+      data = data??{};
+      const form = document.getElementById('clientForm');
+      form.querySelector('[name="client_first_name"]').value = data.first_name??'';
+      form.querySelector('[name="client_last_name"]').value = data.last_name??'';
+      form.querySelector('[name="client_company"]').value = data.company??'';
+      form.querySelector('[name="client_email"]').value = data.email??'';
+      form.querySelector('[name="client_phone_number"]').value = data.phone_number??'';
+      form.querySelector('[name="client_phone_number_other"]').value = data.phone_number_other??'';
+      form.querySelector('[name="client_country"]').value = data.country??'';
+      form.querySelector('[name="client_city"]').value = data.city??'';
+      form.querySelector('[name="client_address"]').value = data.address??'';
+   }
+
+function getDateTime(){
+   var now = new Date();
+   var year = now.getFullYear();
+   var month = ("0" + (now.getMonth() + 1)).slice(-2); // Add leading zero
+   var day = ("0" + now.getDate()).slice(-2); // Add leading zero
+   var hours = ("0" + now.getHours()).slice(-2); // Add leading zero
+   var minutes = ("0" + now.getMinutes()).slice(-2); // Add leading zero
+   var datetimeValue = year + "-" + month + "-" + day + "T" + hours + ":" + minutes;
+   // Set the datetime input value
+   return datetimeValue;
+}
+
+</script>
+
+{% endblock %}

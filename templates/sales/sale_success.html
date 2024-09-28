@@ -1,0 +1,230 @@
+{% extends 'app-base.html' %}
+{% load permissions_tags %}
+{% load custom_filters %}
+{% load static %}
+
+{% block title %}KnelCare-Auth{% endblock %}
+
+{% block content %}
+   {% if  request.user|can_view_sale and (request.user|can_create_sale or request.user|can_make_payroll) %}
+      <div class="overlay"></div>
+      <div class="container mt-lg-3 footer-down">
+         <div class="row text-center">
+            <div class="col">
+               <hr/>
+               <h2 class="site-header text-uppercase font-weight-bold mb-4">Paiement effectué avec succès.</h2>
+               <hr/>
+               <!-- <p class="text-dark">Un mail de confirmation sera envoyé à : <strong>{{ sale.client.email }}</strong>.</p> -->
+            </div>
+         </div>
+         <div class="row justify-content-center">
+            <div class="col-12 col-lg-7">
+               <div class="order-confirmation-wrapper p-2 border border-dark">
+                  <div class="row">
+                     <div class="col">
+                        <strong>Information de la vente:</strong>
+                     </div>
+                  </div>
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">Numero Facture</p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ sale.id }}</p>
+                     </div>
+                  </div>
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">Date de paiement</p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ sale.date }}</p>
+                     </div>
+                  </div>
+
+                  <!-- <hr>
+
+                  <div class="row">
+                     <div class="col">
+                        <small>Vendu à:</small>
+                     </div>
+                  </div> -->
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">Full Name</p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ sale.client.full_name }}</p>
+                     </div>
+                  </div>
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">Addresse Email</p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ sale.client.email }}</p>
+                     </div>
+                  </div>
+                  
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">Addresse</p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ sale.client.address }}</p>
+                     </div>
+                  </div>
+                  {% if sale.client.country %}
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">Pays</p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ sale.client.country }}</p>
+                     </div>
+                  </div>
+                  {% endif %}
+                  {% if sale.client.city %}
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">City</p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ sale.client.city }}</p>
+                     </div>
+                  </div>
+                  {% endif %}
+
+                  {% if order.postcode %}
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">Postal Code</p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ order.postcode }}</p>
+                     </div>
+                  </div>
+                  {% endif %}
+                  {% if sale.client.phone_number %}
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">Numero de téléphone</p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ sale.client.phone_number }}</p>
+                     </div>
+                  </div>
+                  {% endif %}
+                  {% if sale.client.phone_number_other %}
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">Numero de téléphone 2</p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ sale.client.phone_number_other }}</p>
+                     </div>
+                  </div>
+                  {% endif %}
+
+                  {% if sale.client.company %}
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">Entreprise</p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ sale.client.company }}</p>
+                     </div>
+                  </div>
+                  {% endif %} 
+
+                  <hr>
+
+                  <div class="row">
+                     <div class="col">
+                        <strong>Details de la vente:</strong>
+                     </div>
+                  </div>
+                  
+                  <div class="row">
+                     <div class="col-12 col-md-8 text-md-right">
+                        <table style="border: 1px dashed gray;" class="table table-sm table-borderless">
+                           <tr>
+                              <th>Produit</th>
+                              <th>PU ({{ price_unit }})</th>
+                              <th>Quanté</th>
+                              <th>Total ({{ price_unit }})</th>
+                           </tr>
+                           {% for item in sale.items %}
+                           <tr>
+                              <td>{{ item.product.name }}</td>
+                              <td>{{ item.price|floatformat:0|separate_millier }}</td>
+                              <td>{{ item.quantity }}</td>
+                              <td>{{ item.amount|floatformat:0|separate_millier }}</td>
+                           </tr>
+                           {% endfor %}
+                        </table>
+                     </div>
+                  </div>
+
+                  <hr>
+
+                  <div class="row">
+                     <div class="col">
+                        <strong>Montants:</strong>
+                     </div>
+                  </div>
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">Remise: </p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ sale.discount|floatformat:0|separate_millier }}</p>
+                     </div>
+                  </div>
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">Taxe: </p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ sale.tax_amount|floatformat:0|separate_millier }}</p>
+                     </div>
+                  </div>
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">Montant HT: </p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ sale.ht_amount|floatformat:0|separate_millier }}</p>
+                     </div>
+                  </div>
+                  <div class="row">
+                     <div class="col-12 col-md-4">
+                        <p class="mb-0 font-weight-bold">Montant TTC: </p>
+                     </div>
+                     <div class="col-12 col-md-8 text-md-right">
+                        <p class="mb-0">{{ sale.ttc_amount|floatformat:0|separate_millier }}</p>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+         <div class="row justify-content-center">
+            <div class="col-12 col-lg-7 text-right">
+
+               <a href="{% url 'products' %}" class="btn bg-info mt-3 mb-5">
+                  <span class="icon">
+                     <i class="fas fa-angle-left"></i>
+                  </span>
+                  <span class="text-uppercase font-weight-bold">Retour à la page de produits</span>
+               </a>
+               <!-- <a href="{% url 'products' %}?category=deals" class="btn bg-info my-2 font-weight-bold mb-5 mt-3">
+               <span class="icon mr-2">
+               <i class="fas fa-gifts"></i>
+               </span>
+               <span class="text-uppercase">Click me to see our latest deals!</span>
+               </a> -->
+            </div>
+         </div>
+      </div>
+   {% endif %}
+{% endblock %}

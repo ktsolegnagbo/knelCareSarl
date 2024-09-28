@@ -1,0 +1,21 @@
+{% extends 'auth-base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}Email Activatio Page{% endblock %}
+
+{% block content %}
+    Hello {{ user.username }},
+
+    Bienvenue sur {{ domain }}
+
+    Thank you for registering on our site. Please click the link below to activate your account:
+
+    <a href="{{ base_url }}{% url 'activate_email' uidb64=uid token=token %}">Activate your account</a>
+
+    If you did not sign up for this account, you can ignore this email.
+
+    Thank you,
+    The Team
+{% endblock %}
+

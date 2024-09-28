@@ -1,0 +1,9 @@
+/core
+/staticfiles
+.env
+.venv
+.vscode
+/webview/zz_functions.py
+/templates/ZZZZZZZZ
+db.sqlite3
+documentation.txt
