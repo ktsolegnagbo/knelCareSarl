@@ -1,5 +1,4 @@
 /core
-/staticfiles
 .env
 .venv
 .vscode
