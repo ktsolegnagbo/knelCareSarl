@@ -2,10 +2,10 @@
 
 from django import forms
 from django.contrib.auth.models import User
-from .models import Category, Client, Employee, Product, Stock
+from .models import Category, Client, Employee, ExpiredStock, Product, Stock
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import Group
-from django.contrib.auth.models import User, Permission
+from django.contrib.auth.models import Permission
 
 
 class GroupForm(forms.ModelForm):
@@ -62,7 +62,7 @@ class CategoryForm(forms.ModelForm):
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['category', 'name', 'description', 'price', 'is_available', 'image_url', 'image']
+        fields = ['category', 'name', 'description', 'price', 'alert_threshold', 'is_available', 'image_url', 'image']
         
         widgets = {
             'category': forms.Select(attrs={
@@ -84,6 +84,12 @@ class ProductForm(forms.ModelForm):
                 'step': '0.01',
                 'placeholder': 'Entrez le prix du produit',
             }),
+            'alert_threshold': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '1',
+                'placeholder': 'Entrez le seuil d\'alerte',
+            }),
+            
             'is_available': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
             }),
@@ -102,6 +108,7 @@ class ProductForm(forms.ModelForm):
             'name': 'Nom du produit',
             'description': 'Description du produit',
             'price': 'Prix de vente du produit',
+            'alert_threshold': 'Seuil d\'alerte Quantité',
             'is_available': 'Disponibilité du produit',
             'image_url': 'URL de l\'image',
             'image': 'Image du produit',
@@ -115,13 +122,14 @@ class ProductForm(forms.ModelForm):
         self.fields['name'].required = True
         self.fields['description'].required = False
         self.fields['price'].required = True
+        self.fields['alert_threshold'].required = True
         self.fields['image_url'].required = False
         self.fields['image'].required = False
 
 class StockForm(forms.ModelForm):
     class Meta:
         model = Stock
-        fields = ['product', 'quantity', 'price']
+        fields = ['product', 'quantity', 'price', 'expiration_date']
         widgets = {
             'product': forms.Select(attrs={
                 'class': 'form-control',
@@ -137,11 +145,17 @@ class StockForm(forms.ModelForm):
                 'step': '0.01',
                 'placeholder': 'Entrez le prix d\'achat du produit',
             }),
+            'expiration_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Choisir date de péromption',
+                'type': 'date'
+            }),
         }
         labels = {
             'product': 'Nom du produit',
             'quantity': 'Entrer La Quantité du stock',
             'price': 'Prix d\'achat du produit',
+            'expiration_date': 'Date de péromption',
         }
 
     def __init__(self, *args, **kwargs):
@@ -151,7 +165,42 @@ class StockForm(forms.ModelForm):
         self.fields['product'].required = True
         self.fields['quantity'].required = True
         self.fields['price'].required = True
-    
+        self.fields['expiration_date'].required = True
+        
+class ExpiredStockForm(forms.ModelForm):
+    class Meta:
+        model = ExpiredStock
+        fields = ['product', 'quantity', 'expiration_date']
+        widgets = {
+            'product': forms.Select(attrs={
+                'class': 'form-control',
+                'empty_label': 'Sélectionnez un produit',
+            }),
+            'quantity': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '1',
+                'placeholder': 'Entrez la quantité Périmée',
+            }),
+            'expiration_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Choisir date de péromption',
+                'type': 'date'
+            }),
+        }
+        labels = {
+            'product': 'Nom du produit',
+            'quantity': 'Entrer La Quantité Périmée',
+            'expiration_date': 'Date de péromption',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Définir les champs requis
+        self.fields['product'].required = True
+        self.fields['quantity'].required = True
+        self.fields['expiration_date'].required = True
+
 class RegisterForm(forms.ModelForm):
     # password_confirm = forms.PasswordInput()
 
@@ -254,20 +303,23 @@ class LoginForm(forms.ModelForm):
         self.fields['credential'].required = True
         self.fields['password'].required = True
 
-
 class EmployeeForm(forms.ModelForm):
     class Meta():
         model = Employee
         # exclude = ('user',)
         # agree_privacy_policy
         # 'employee_pic',
-        fields = [ 'salary_base', 'phone_number', 'roles' ]
+        fields = [ 'position', 'salary_brut', 'phone_number', 'roles' ]
         
         widgets = {
-            'salary_base': forms.NumberInput(attrs={
+            'position': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Saisir l\'Intintulé du Poste Occupé',
+            }),
+            'salary_brut': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
-                'placeholder': 'Entrez le Salaire de base',
+                'placeholder': 'Entrez le Salaire brut',
             }),
             'roles': forms.SelectMultiple(attrs={
                 'class': 'form-control',
@@ -286,10 +338,6 @@ class EmployeeForm(forms.ModelForm):
             #     'placeholder': 'Choisir date de naissance',
             #     'type': 'date'
             # }),
-            # 'location': forms.TextInput(attrs={
-            #     'class': 'form-control',
-            #     'placeholder': 'Localité / Ville',
-            # }),
             # 'biography': forms.Textarea(attrs={
             #     'class': 'form-control',
             #     # 'cols': 20,
@@ -307,7 +355,8 @@ class EmployeeForm(forms.ModelForm):
         }
         
         labels = {
-            'salary_base': 'Salaire de base de l\'employé',
+            'salary_brut': 'Salaire de base de l\'employé',
+            'position': 'Intintulé du Poste Occupé',
             'roles': 'Roles d\'accès',
             'phone_number': 'Numero de téléphone',
             # 'country': 'Sélectionnez le pays d\'activité',
@@ -322,7 +371,8 @@ class EmployeeForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         # Définir les champs requis
-        self.fields['salary_base'].required = False
+        self.fields['salary_brut'].required = False
+        self.fields['position'].required = False
         self.fields['roles'].required = True
         self.fields['phone_number'].required = False
         # self.fields['country'].required = True

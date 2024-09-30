@@ -3,45 +3,60 @@ from collections import defaultdict
 from datetime import date, datetime
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
-from django.shortcuts import get_object_or_404, render, redirect
+from django.shortcuts import render, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.http import urlsafe_base64_decode
 from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User, Permission, Group
+from django.contrib.auth.models import User, Permission
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Sum, Q
-from webview.utils import createAppSite, get_years_list, notEmpty, parseDate, paymentStatusList, read_base64_file, safeDecimal, parseDatetime, save_pdf_file
-
+from webview.utils import createAppSite, get_years_list, givenRate, notEmpty, parseDate, paymentStatusList, read_base64_file, safeDecimal, parseDatetime, save_pdf_file
 from decimal import Decimal
 from django.utils import timezone
 from django.template.loader import render_to_string
 from weasyprint import CSS, HTML
 from django.contrib.contenttypes.models import ContentType
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
-from django.contrib.auth.mixins import LoginRequiredMixin
 
-from .forms import CategoryForm, ClientForm, GroupForm, PayrollFilterForm, ProductForm, RegisterForm, LoginForm, EmployeeForm, StockForm
+from .forms import CategoryForm, ClientForm, ExpiredStockForm, ProductForm, RegisterForm, LoginForm, EmployeeForm, StockForm
 from .tokens import account_activation_token
 from .context import shopping_contents
 from .functions import send_email_with_attachment
-from .models import AppSite, Category, Client, Country, Payroll, Product, Employee, Sale, SaleItem, Payment, Role, Stock
+from .models import AppSite, Category, Client, Country, ExpiredStock, Payroll, Product, Employee, Sale, SaleItem, Payment, Role, Stock
 from .decorators import logout_required
+
+PERMISSION_GROUP_TRANSLATIONS = {
+    'country': 'Pays', 
+    'role': 'Roles', 
+    'employee': 'Utilisateurs/Employées', 
+    'payroll': 'Payements salaire Employées', 
+    'client': 'Clients', 
+    'category': 'Categories de produits', 
+    'product': 'Produits', 
+    'stock': 'Stocks de produits', 
+    'sale': 'Ventes de produits', 
+    'saleitem': 'Item Article vendu', 
+    'payment': 'Payement du Client'
+}
+
 
 PERMISSION_TRANSLATIONS = {
     'Can add category': 'Peut ajouter une catégorie', #add_category
     'Can change category': 'Peut modifier une catégorie', #change_category
     'Can delete category': 'Peut supprimer une catégorie', #delete_category
     'Can view category': 'Peut voir une catégorie', #view_category
+    
     'Can add client': 'Peut ajouter un client', #add_client
     'Can change client': 'Peut modifier un client', #change_client
     'Can delete client': 'Peut supprimer un client', #delete_client
     'Can view client': 'Peut voir un client', #view_client
+    
     'Can add country': 'Peut ajouter un pays', #add_country
     'Can change country': 'Peut modifier un pays', #change_country
     'Can delete country': 'Peut supprimer un pays', #delete_country
     'Can view country': 'Peut voir un pays', #view_country
+    
     'Can add employee': 'Peut ajouter un employé', #add_employee
     'Can change employee': 'Peut modifier un employé', #change_employee
     'Can delete employee': 'Peut supprimer un employé', #delete_employee
@@ -61,22 +76,31 @@ PERMISSION_TRANSLATIONS = {
     'Can change payment': 'Peut modifier un paiement', #change_payment
     'Can delete payment': 'Peut supprimer un paiement', #delete_payment
     'Can view payment': 'Peut voir un paiement', #view_payment
+    
     'Can add payroll': 'Peut ajouter une paie', #add_payroll
     'Can change payroll': 'Peut modifier une paie', #change_payroll
     'Can delete payroll': 'Peut supprimer une paie', #delete_payroll
     'Can view payroll': 'Peut voir une paie', #view_payroll
+    
     'Can add product': 'Peut ajouter un produit', #add_product
     'Can change product': 'Peut modifier un produit', #change_product
     'Can delete product': 'Peut supprimer un produit', #delete_product
     'Can view product': 'Peut voir un produit', #view_product
+    
     'Can add role': 'Peut ajouter un rôle', #add_role
     'Can change role': 'Peut modifier un rôle', #change_role
     'Can delete role': 'Peut supprimer un rôle', #delete_role
     'Can view role': 'Peut voir un rôle', #view_role
+    
     'Can add stock': 'Peut ajouter un stock', #add_stock
     'Can change stock': 'Peut modifier un stock', #change_stock
     'Can delete stock': 'Peut supprimer un stock', #delete_stock
     'Can view stock': 'Peut voir un stock', #view_stock
+    
+    'Can add expired stock': 'Peut ajouter un stock périmé', #add_expired_stock
+    'Can change expired stock': 'Peut modifier un stock périmé', #change_expired_stock
+    'Can delete expired stock': 'Peut supprimer un stock périmé', #delete_expired_stock
+    'Can view expired stock': 'Peut voir un stock périmé', #view_expired_stock
 }
 
 unAutorizedMsg = 'Vous ne disposez pas de droit suffisant, contacter l\'administrateur'
@@ -103,64 +127,62 @@ def home(request):
     return redirect('products')
     # return render(request, 'home/index.html', {})
 
-class GroupListView(LoginRequiredMixin, ListView):
-    model = Group
-    template_name = 'groups/group_list.html'
-    context_object_name = 'groups'
+# class GroupListView(LoginRequiredMixin, ListView):
+#     model = Group
+#     template_name = 'groups/group_list.html'
+#     context_object_name = 'groups'
 
-class GroupCreateView(LoginRequiredMixin, CreateView):
-    model = Group
-    form_class = GroupForm
-    template_name = 'groups/group_form.html'
-    success_url = reverse_lazy('group-list')
+# class GroupCreateView(LoginRequiredMixin, CreateView):
+#     model = Group
+#     form_class = GroupForm
+#     template_name = 'groups/group_form.html'
+#     success_url = reverse_lazy('group-list')
     
-    @login_required
-    def form_valid(self, form):
-        group = form.save(commit=False)
-        group.save()  # Save the group first
-        form.save_m2m()  # Save many-to-many relationships (permissions and users)
-        users = form.cleaned_data.get('users')
-        self.assign_group_to_users(group, users)
-        return super().form_valid(form)
+#     @login_required
+#     def form_valid(self, form):
+#         group = form.save(commit=False)
+#         group.save()  # Save the group first
+#         form.save_m2m()  # Save many-to-many relationships (permissions and users)
+#         users = form.cleaned_data.get('users')
+#         self.assign_group_to_users(group, users)
+#         return super().form_valid(form)
     
-    @login_required
-    def assign_group_to_users(self, group, users):
-        """Assign the group to selected users."""
-        for user in users:
-            user.groups.add(group)
+#     @login_required
+#     def assign_group_to_users(self, group, users):
+#         """Assign the group to selected users."""
+#         for user in users:
+#             user.groups.add(group)
 
-class GroupUpdateView(LoginRequiredMixin, UpdateView):
-    model = Group
-    form_class = GroupForm
-    template_name = 'groups/group_form.html'
-    success_url = reverse_lazy('group-list')
+# class GroupUpdateView(LoginRequiredMixin, UpdateView):
+#     model = Group
+#     form_class = GroupForm
+#     template_name = 'groups/group_form.html'
+#     success_url = reverse_lazy('group-list')
     
-    @login_required
-    def get_object(self, queryset=None):
-        return get_object_or_404(Group, pk=self.kwargs.get('pk'))
+#     @login_required
+#     def get_object(self, queryset=None):
+#         return get_object_or_404(Group, pk=self.kwargs.get('pk'))
     
-    @login_required
-    def form_valid(self, form):
-        group = form.save(commit=False)
-        group.save()  # Update the group
-        form.save_m2m()  # Save many-to-many relationships (permissions and users)
-        users = form.cleaned_data.get('users')
-        self.assign_group_to_users(group, users)
-        return super().form_valid(form)
+#     @login_required
+#     def form_valid(self, form):
+#         group = form.save(commit=False)
+#         group.save()  # Update the group
+#         form.save_m2m()  # Save many-to-many relationships (permissions and users)
+#         users = form.cleaned_data.get('users')
+#         self.assign_group_to_users(group, users)
+#         return super().form_valid(form)
     
-    @login_required
-    def assign_group_to_users(self, group, users):
-        """Reassign the group to the updated users."""
-        group.user_set.clear()  # Remove current users from the group
-        for user in users:
-            user.groups.add(group)
+#     @login_required
+#     def assign_group_to_users(self, group, users):
+#         """Reassign the group to the updated users."""
+#         group.user_set.clear()  # Remove current users from the group
+#         for user in users:
+#             user.groups.add(group)
 
-class GroupDeleteView(LoginRequiredMixin, DeleteView):
-    model = Group
-    template_name = 'groups/group_confirm_delete.html'
-    success_url = reverse_lazy('group-list')
-
-
+# class GroupDeleteView(LoginRequiredMixin, DeleteView):
+#     model = Group
+#     template_name = 'groups/group_confirm_delete.html'
+#     success_url = reverse_lazy('group-list')
 
 @login_required
 def update_app_site(request):
@@ -191,7 +213,7 @@ def user_register(request):
     
     registered = False
     countries = Country.objects.filter(deleted=False)
-    
+
     if request.method == 'POST':
     
         if not has_perm(request.user, create_permission):
@@ -228,9 +250,15 @@ def user_register(request):
                     user.set_password(user.password)
                     # user.is_active = True
                     user.save()
+
+                    try:
+                        current_user = Employee.objects.get(user=request.user)
+                    except Exception:
+                        current_user = None
                     
                     employee = employee_form.save(commit=False)
                     employee.user = user
+                    employee.created_by = current_user
                     
                     if employee_pic:
                         employee.employee_pic_thumb = employee_pic
@@ -369,82 +397,6 @@ def user_logout(request):
     return redirect(reverse('login'))
 
 @login_required
-def generate_payroll(request):
-    create_permission = 'add_payroll'
-    # update_permission = 'change_payroll'
-    # delete_permission = 'delete_payroll'
-    view_permission = 'view_payroll'
-    
-    if not has_perm(request.user, view_permission) or not has_perm(request.user, create_permission):
-        #raise PermissionDenied
-        messages.error(request, unAutorizedMsg)
-        return redirect(reverse('home'))
-    
-    form = PayrollFilterForm(request.GET or None)
-    if form.is_valid():
-        start_date = form.cleaned_data.get('start_date')
-        end_date = form.cleaned_data.get('end_date')
-        
-        if not start_date:
-            start_date = date.today().replace(day=1)
-            
-        if not end_date:
-            end_date = date.today()
-            
-        employees = Employee.objects.filter(user__is_superuser=False, deleted=False)
-        
-        for employee in employees:
-            # Vérifiez si la paie pour cet employé a déjà été générée pour la période sélectionnée
-            payroll_exists = Payroll.objects.filter(employee=employee, month=start_date, deleted=False).exists()
-            if payroll_exists:
-                messages.warning(request, f"La paie pour {employee.user.get_full_name()} existe déjà pour ce mois.")
-                continue
-
-            # Calcul du salaire total (par exemple, salaire fixe + primes de vente)
-            base_salary = employee.base_salary
-            sales_bonus = employee.calculate_sales_bonus(start_date, end_date)  # Exemple pour les agents commerciaux
-            total_salary = base_salary + sales_bonus
-
-            # Créer une instance de paie pour l'employé
-            payroll = Payroll(
-                employee=employee,
-                month=start_date,
-                base_salary=base_salary,
-                sales_bonus=sales_bonus,
-                total_salary=total_salary
-            )
-            payroll.save()
-            messages.success(request, f"Paie générée pour {employee.user.get_full_name()}.")
-        return redirect('payroll_report')  # Rediriger vers la page de rapport de paie
-    return render(request, 'payroll/generate_payroll.html', {'form': form})
-
-@login_required
-def payroll_report(request):
-    # create_permission = 'add_payroll'
-    # update_permission = 'change_payroll'
-    # delete_permission = 'delete_payroll'
-    view_permission = 'view_payroll'
-    
-    if not has_perm(request.user, view_permission):
-        #raise PermissionDenied
-        messages.error(request, unAutorizedMsg)
-        return redirect(reverse('home'))
-    
-    form = PayrollFilterForm(request.GET or None)
-    
-    # payrolls = Payroll.objects.none()  # Par défaut, aucun résultat
-    payrolls = Payroll.objects.filter(deleted=False)
-    
-    if form.is_valid():
-        start_date = form.cleaned_data.get('start_date')
-        end_date = form.cleaned_data.get('end_date')
-
-        if start_date and end_date:
-            payrolls = Payroll.objects.filter(date__range=[start_date, end_date], deleted=False)
-
-    return render(request, 'payrolls/payroll_report.html', {'payrolls': payrolls, 'form': form})
-
-@login_required
 def all_products(request):
     """ A view to show all products, including sorting and search queries """
 
@@ -540,6 +492,11 @@ def admin_products(request, product_id=None):
     
     if request.method == 'POST':
         productAction = request.POST.get('product_action') 
+        try:
+            current_user = Employee.objects.get(user=request.user)
+        except Exception:
+            current_user = None
+            
         if productAction == 'create':
             if not has_perm(request.user, create_permission):
                 #raise PermissionDenied
@@ -548,7 +505,9 @@ def admin_products(request, product_id=None):
             
             form = ProductForm(request.POST, request.FILES)
             if form.is_valid():
-                product = form.save()
+                product = form.save(commit=False)
+                product.user = current_user
+                product.save()
                 messages.success(request, f'Successfully added product: {product.name}')
                 return redirect(reverse('admin_list_products'))
             else:
@@ -569,7 +528,10 @@ def admin_products(request, product_id=None):
                     try:
                         form = ProductForm(request.POST, request.FILES, instance=product)
                         if form.is_valid():
-                            product = form.save()
+                            product = form.save(commit=False)
+                            product.updated_by = current_user
+                            product.updated_at = timezone.now()
+                            product.save()
                             messages.success(request, f'Successfully updated product: {product.name}')
                             # return redirect(reverse('product_detail', args=[product.id]))
                             return redirect(reverse('admin_list_products'))
@@ -590,6 +552,8 @@ def admin_products(request, product_id=None):
                 try:
                     product = Product.objects.get(id=product_id)
                     product.deleted = True
+                    product.deleted_by = current_user
+                    product.deleted_at = timezone.now()
                     product.save()
                     # product.delete()
                     messages.success(request, 'Product deleted successfully!')
@@ -661,6 +625,10 @@ def admin_clients(request, client_id=None):
 
     if request.method == 'POST':
         clientAction = request.POST.get('client_action')
+        try:
+            current_user = Employee.objects.get(user=request.user)
+        except Exception:
+            current_user = None
         if clientAction == 'create':
             if not has_perm(request.user, create_permission):
                 #raise PermissionDenied
@@ -669,7 +637,9 @@ def admin_clients(request, client_id=None):
             
             form = ClientForm(request.POST, request.FILES)
             if form.is_valid():
-                client = form.save()
+                client = form.save(commit=False)
+                client.user = current_user
+                client.save()
                 messages.success(request, f'Successfully added client: {client.full_name}')
                 return redirect(reverse('admin_list_clients'))
             else:
@@ -690,7 +660,10 @@ def admin_clients(request, client_id=None):
                     try:
                         form = ClientForm(request.POST, request.FILES, instance=client)
                         if form.is_valid():
-                            client = form.save()
+                            client = form.save(commit=False)
+                            client.updated_by = current_user
+                            client.updated_at = timezone.now()
+                            client.save()
                             messages.success(request, f'Successfully updated client: {client.full_name}')
                             # return redirect(reverse('client_detail', args=[client.id]))
                             return redirect(reverse('admin_list_clients'))
@@ -711,6 +684,8 @@ def admin_clients(request, client_id=None):
                 try:
                     client = Client.objects.get(id=client_id)
                     client.deleted = True
+                    client.deleted_by = current_user
+                    client.deleted_at = timezone.now()
                     client.save()
                     # client.delete()
                     messages.success(request, 'Client deleted successfully!')
@@ -746,7 +721,11 @@ def admin_users(request, user_id=None):
     if request.method == 'POST':
         rpg = request.POST.get
         userAction = rpg('user_action')
-        
+        try:
+            current_user = Employee.objects.get(user=request.user)
+        except Exception:
+            current_user = None
+                
         if userAction == 'create':
             if not has_perm(request.user, create_permission):
                 #raise PermissionDenied
@@ -771,6 +750,7 @@ def admin_users(request, user_id=None):
 
                     employee = employee_form.save(commit=False)
                     employee.user = user
+                    employee.created_by = current_user
 
                     if employee_pic:
                         employee.employee_pic = employee_pic
@@ -824,6 +804,8 @@ def admin_users(request, user_id=None):
                 user.save()
                 
                 employee = employee_form.save(commit=False)
+                employee.updated_by = current_user
+                employee.updated_at = timezone.now()
 
                 if request.FILES.get('employee_pic'):
                     employee.employee_pic = request.FILES.get('employee_pic')
@@ -850,6 +832,8 @@ def admin_users(request, user_id=None):
                     employee = Employee.objects.get(id=user_id)
                     user = employee.user
                     employee.deleted = True
+                    employee.deleted_by = current_user
+                    employee.deleted_at = timezone.now()
                     employee.save()
                     
                     # user.deleted = True
@@ -874,16 +858,24 @@ def admin_users(request, user_id=None):
             
             if user_id:
                 employee_salary_date = parseDatetime(rpg('employee_salary_date')) if rpg('employee_salary_date') else None
-                employee_base_salary = safeDecimal(rpg('employee_base_salary'), tryNull=True)
+                employee_salary_brut = safeDecimal(rpg('employee_salary_brut'), tryNull=True)
+                employee_cnss = safeDecimal(rpg('employee_cnss'), tryNull=True)
+                employee_irpp = safeDecimal(rpg('employee_irpp'), tryNull=True)
+                employee_other_deductions = safeDecimal(rpg('employee_other_deductions'), tryNull=True)
                 employee_commission = safeDecimal(rpg('employee_commission'))
 
-                if employee_salary_date and employee_base_salary:
+                if employee_salary_date and employee_salary_brut:
                     employee_user = Employee.objects.get(id=user_id)
                     payroll = Payroll(
                         employee=employee_user,
                         date=employee_salary_date,
-                        salary_base=employee_base_salary,
-                        commission=employee_commission
+                        salary_brut=employee_salary_brut,
+                        cnss=employee_cnss,
+                        irpp=employee_irpp,
+                        other_deductions=employee_other_deductions,
+                        commission=employee_commission,
+                        created_by=current_user,
+                        created_at = timezone.now()
                     )
                     payroll.save()
 
@@ -914,25 +906,17 @@ def admin_users(request, user_id=None):
     content_types = [ContentType.objects.get_for_model(model) for model in models]
     permissions = Permission.objects.filter(content_type__in=content_types)
     
-    # translated_permissions = [
-    #     {
-    #         'id': permission.id,
-    #         'name': PERMISSION_TRANSLATIONS.get(permission.name, permission.name),  # Fallback to original if not found
-    #         'codename': permission.codename
-    #     }
-    #     for permission in permissions
-    # ]
-    
     grouped_permissions = defaultdict(list)
     
     for permission in permissions:
-        model_name = permission.content_type.model  # Get the model name related to the permission
+        model_name = PERMISSION_GROUP_TRANSLATIONS.get(permission.content_type.model, permission.content_type.model)   # Get the model name related to the permission
         translated_permission_name = PERMISSION_TRANSLATIONS.get(permission.name, permission.name)  # Fallback to original if not found
         grouped_permissions[model_name].append({
             'id': permission.id,
             'name': translated_permission_name,
             'codename': permission.codename
         })
+        print(model_name)
     grouped_permissions = dict(grouped_permissions)
 
     return render(request, 'admins/employees.html', {
@@ -1005,9 +989,9 @@ def admin_categories(request, category_id=None):
     if request.method == 'POST':
         categoryAction = request.POST.get('category_action')
         try:
-            employee = Employee.objects.get(user=request.user)
+            current_user = Employee.objects.get(user=request.user)
         except Exception:
-            employee = None
+            current_user = None
             
         if categoryAction == 'create':
             if not has_perm(request.user, create_permission):
@@ -1018,7 +1002,8 @@ def admin_categories(request, category_id=None):
             form = CategoryForm(request.POST, request.FILES)
             if form.is_valid():
                 category = form.save(commit=False)
-                category.user = employee
+                category.user = current_user
+                category.created_at = timezone.now()
                 category.save()
                 
                 messages.success(request, f'Successfully added category {category.name}')
@@ -1047,7 +1032,8 @@ def admin_categories(request, category_id=None):
                         form = CategoryForm(request.POST, request.FILES, instance=category)
                         if form.is_valid():
                             category = form.save(commit=False)
-                            category.user = employee
+                            category.updated_by = current_user
+                            category.updated_at = timezone.now()
                             category.save()
                             messages.success(request, f'Successfully updated category {category.name}')
                             # return redirect(reverse('category_detail', args=[category.id]))
@@ -1069,6 +1055,8 @@ def admin_categories(request, category_id=None):
                 try:
                     category = Category.objects.get(id=category_id)
                     category.deleted = True
+                    category.updated_by = current_user
+                    category.deleted_at = timezone.now()
                     category.save()
                     # category.delete()
                     messages.success(request, 'category deleted successfully!')
@@ -1100,9 +1088,9 @@ def admin_stocks(request, stock_id=None):
     if request.method == 'POST':
         stockAction = request.POST.get('stock_action')
         try:
-            employee = Employee.objects.get(user=request.user)
+            current_user = Employee.objects.get(user=request.user)
         except Exception:
-            employee = None
+            current_user = None
             
         if stockAction == 'create':
             if not has_perm(request.user, create_permission):
@@ -1113,7 +1101,7 @@ def admin_stocks(request, stock_id=None):
             form = StockForm(request.POST, request.FILES)
             if form.is_valid():
                 stock = form.save(commit=False)
-                stock.user = employee
+                stock.user = current_user
                 stock.save()
                 
                 messages.success(request, f'Successfully added stock {stock.quantity} to {stock.product.name}')
@@ -1142,7 +1130,8 @@ def admin_stocks(request, stock_id=None):
                         form = StockForm(request.POST, request.FILES, instance=stock)
                         if form.is_valid():
                             stock = form.save(commit=False)
-                            stock.user = employee
+                            stock.updated_by = current_user
+                            stock.updated_at = timezone.now()
                             stock.save()
                             messages.success(request, f'Successfully updated stock {stock.quantity} to {stock.product.name}')
                             # return redirect(reverse('stock_detail', args=[stock.id]))
@@ -1164,6 +1153,8 @@ def admin_stocks(request, stock_id=None):
                 try:
                     stock = Stock.objects.get(id=stock_id)
                     stock.deleted = True
+                    stock.deleted_by = current_user
+                    stock.deleted_at = timezone.now()
                     stock.save()
                     # stock.delete()
                     messages.success(request, 'stock deleted successfully!')
@@ -1179,6 +1170,106 @@ def admin_stocks(request, stock_id=None):
         
     stocks = Stock.objects.filter(deleted=False)
     return render(request, 'admins/stocks.html', { 'form': form, 'stocks': stocks })
+
+@login_required
+def admin_expired_stocks(request, expired_stock_id=None):
+    """ Add a expired stock to the store """
+    create_permission = 'add_expired_stock'
+    update_permission = 'change_expired_stock'
+    delete_permission = 'delete_expired_stock'
+    view_permission = 'view_expired_stock'
+    
+    if not has_perm(request.user, view_permission):
+        #raise PermissionDenied
+        messages.error(request, unAutorizedMsg)
+        return redirect(reverse('home'))
+
+    if request.method == 'POST':
+        expiredStockAction = request.POST.get('expired_stock_action')
+        try:
+            current_user = Employee.objects.get(user=request.user)
+        except Exception:
+            current_user = None
+            
+        if expiredStockAction == 'create':
+            if not has_perm(request.user, create_permission):
+                #raise PermissionDenied
+                messages.error(request, unAutorizedMsg)
+                return redirect(reverse('home'))
+            
+            form = ExpiredStockForm(request.POST, request.FILES)
+            if form.is_valid():
+                expired_stock = form.save(commit=False)
+                expired_stock.user = current_user
+                expired_stock.save()
+                
+                messages.success(request, f'Vous avez déclarer {expired_stock.quantity} produits périmé pour {expired_stock.product.name}')
+              
+                redirect_url = request.POST.get('redirect_url')
+                if (notEmpty(redirect_url)):
+                    return redirect(redirect_url)
+                else:
+                    return redirect(reverse('admin_list_expired_stocks'))
+            else:
+                messages.error(request, 'Failed to add expired stock. Please ensure the form is valid.')
+        elif expiredStockAction == 'update':
+            if not has_perm(request.user, update_permission):
+                #raise PermissionDenied
+                messages.error(request, unAutorizedMsg)
+                return redirect(reverse('home'))
+            
+            if isinstance(expired_stock_id, int):
+                try:
+                    expired_stock = ExpiredStock.objects.get(pk=expired_stock_id)
+                except Exception:
+                    expired_stock = None
+                
+                if expired_stock:
+                    try:
+                        form = ExpiredStockForm(request.POST, request.FILES, instance=expired_stock)
+                        if form.is_valid():
+                            expired_stock = form.save(commit=False)
+                            expired_stock.updated_by = current_user
+                            expired_stock.updated_at = timezone.now()
+                            expired_stock.save()
+                            messages.success(request, f'Vous avez modifier la déclaration de péromption de {expired_stock.quantity} pour {expired_stock.product.name}')
+                            # return redirect(reverse('expired_stock_detail', args=[expired_stock.id]))
+                            return redirect(reverse('admin_list_expired_stocks'))
+                        else:
+                            messages.error(request, 'Failed to update expired stocks. Please ensure the form is valid.')
+                    except ExpiredStock.DoesNotExist:
+                        messages.error(request, 'Error while saving data.')
+                else:
+                    messages.error(request, 'expired stock not found.')
+                    return redirect(reverse('admin_list_expired_stocks'))
+        elif expiredStockAction == 'delete':
+            if not has_perm(request.user, delete_permission):
+                #raise PermissionDenied
+                messages.error(request, unAutorizedMsg)
+                return redirect(reverse('home'))
+            
+            if isinstance(expired_stock_id, int):
+                try:
+                    expired_stock = ExpiredStock.objects.get(id=expired_stock_id)
+                    expired_stock.deleted = True
+                    expired_stock.deleted_by = current_user
+                    expired_stock.deleted_at = timezone.now()
+                    expired_stock.save()
+                    # expired_stock.delete()
+                    messages.success(request, 'expired stocks deleted successfully!')
+                    return redirect(reverse('admin_list_expired_stocks'))
+                except ExpiredStock.DoesNotExist:
+                    messages.error(request, 'expired stocks not found.')
+        else:
+            messages.error(request, "Pas d'action trouvé!")
+            return redirect(reverse('admin_list_expired_stocks'))
+    else:
+        form = ExpiredStockForm()
+        
+        
+    expired_stocks = ExpiredStock.objects.filter(deleted=False)
+    return render(request, 'admins/expired_stocks.html', { 'form': form, 'expired_stocks': expired_stocks })
+
 
 @login_required
 def admin_sales(request, sale_id=None):
@@ -1203,12 +1294,15 @@ def admin_sales(request, sale_id=None):
     filter_clients = []
     
     fDate = datetime.now()
-    fsdate = fDate.replace(hour=0, minute=0, second=0, microsecond=0)  # 00:00:00
+    fsdate = fDate.replace(hour=0, minute=0, second=0, microsecond=1000)  # 00:00:00
     fedate = fDate.replace(hour=23, minute=59, second=59, microsecond=999999)  # 23:59:59
     
     if 'filter_start_date' in request.session and 'filter_end_date' in request.session:
-        filter_start_date = parseDate(request.session['filter_start_date']) if notEmpty(request.session['filter_start_date']) else fsdate
-        filter_end_date = parseDate(request.session['filter_end_date']) if notEmpty(request.session['filter_end_date']) else fedate
+        ffsdate = parseDate(request.session['filter_start_date']) if notEmpty(request.session['filter_start_date']) else fsdate
+        ffedate = parseDate(request.session['filter_end_date']) if notEmpty(request.session['filter_end_date']) else fedate
+        
+        filter_start_date = ffsdate.replace(hour=0, minute=0, second=0, microsecond=1000)
+        filter_end_date = ffedate.replace(hour=23, minute=59, second=59, microsecond=999999)
     else:
         filter_start_date = fsdate
         filter_end_date = fedate
@@ -1216,6 +1310,11 @@ def admin_sales(request, sale_id=None):
     
     if request.method == 'POST':
         saleAction = request.POST.get('sale_action')
+        try:
+            current_user = Employee.objects.get(user=request.user)
+        except Exception:
+            current_user = None
+
         if saleAction == 'delete':
             if not has_perm(request.user, delete_permission):
                 #raise PermissionDenied
@@ -1226,6 +1325,8 @@ def admin_sales(request, sale_id=None):
                 try:
                     sale = Sale.objects.get(id=sale_id)
                     sale.deleted = True
+                    sale.deleted_by = current_user
+                    sale.deleted_at = timezone.now()
                     sale.save()
                     
                     # sale.delete()
@@ -1241,9 +1342,11 @@ def admin_sales(request, sale_id=None):
             
             if sale_id:
                 try:
-                    sale = SaleItem.objects.get(id=sale_id)
-                    sale.deleted = True
-                    sale.save()
+                    saleItem = SaleItem.objects.get(id=sale_id)
+                    saleItem.deleted = True
+                    saleItem.deleted_by = current_user
+                    saleItem.deleted_at = timezone.now()
+                    saleItem.save()
                     
                     # sale.delete()
                     messages.success(request, 'Sale Item deleted successfully!')
@@ -1258,9 +1361,11 @@ def admin_sales(request, sale_id=None):
             
             if sale_id:
                 try:
-                    sale = Payment.objects.get(id=sale_id)
-                    sale.deleted = True
-                    sale.save()
+                    salePayment = Payment.objects.get(id=sale_id)
+                    salePayment.deleted = True
+                    salePayment.deleted_by = current_user
+                    salePayment.deleted_at = timezone.now()
+                    salePayment.save()
                     
                     # sale.delete()
                     messages.success(request, 'Sale Payment deleted successfully!')
@@ -1288,10 +1393,9 @@ def admin_sales(request, sale_id=None):
                 sales = [sale for sale in sales if str(sale.client.id) in filter_clients]
                 
             if notEmpty(eStartDate) and notEmpty(eEndDate) :
-                filter_start_date = datetime.strptime(eStartDate, '%Y-%m-%d').replace(hour=0, minute=0, second=0, microsecond=0)
+                filter_start_date = datetime.strptime(eStartDate, '%Y-%m-%d').replace(hour=0, minute=0, second=0, microsecond=1000)
                 filter_end_date = datetime.strptime(eEndDate, '%Y-%m-%d').replace(hour=23, minute=59, second=59, microsecond=999999)
                 
-            
         
     sales = Sale.objects.filter(deleted=False) if not sales and sales is None else sales
     # sales = [sale for sale in sales if filter_start_date <= sale.date <= filter_end_date]
@@ -1349,19 +1453,21 @@ def admin_payrolls(request, payroll_id=None):
         payrollAction = rpg('payroll_action')
         try:
             employee = Employee.objects.get(id=rpg('employee'))
-            user = Employee.objects.get(user=request.user)
-            
+            current_user = Employee.objects.get(user=request.user)
         except Exception:
             employee = None
-            user = None
+            current_user = None
         
         if payrollAction == 'create' or payrollAction == 'update' and employee and employee is not None:
             
             salary_date = parseDate(rpg('salary_date')) if rpg('salary_date') else None
-            salary_base = safeDecimal(rpg('salary_base'), tryNull=True)
+            salary_brut = safeDecimal(rpg('salary_brut'), tryNull=True)
+            salary_cnss = safeDecimal(rpg('salary_cnss'), tryNull=True)
+            salary_irpp = safeDecimal(rpg('salary_irpp'), tryNull=True)
+            salary_other_deductions = safeDecimal(rpg('salary_other_deductions'), tryNull=True)
             salary_commission = safeDecimal(rpg('salary_commission'))
             
-            if salary_base:
+            if salary_brut:
                 if payrollAction == 'create':
                     if not has_perm(request.user, create_permission):
                         #raise PermissionDenied
@@ -1370,11 +1476,14 @@ def admin_payrolls(request, payroll_id=None):
                 
                     try:
                         payroll = Payroll(
-                            employee = employee,
-                            date = salary_date,
-                            salary_base = salary_base,
-                            commission = salary_commission,
-                            created_by = user
+                            employee=employee,
+                            date=salary_date,
+                            salary_brut=salary_brut,
+                            cnss=salary_cnss,
+                            irpp=salary_irpp,
+                            other_deductions=salary_other_deductions,
+                            commission=salary_commission,
+                            created_by=current_user
                         )
                         payroll.save()
                         
@@ -1397,9 +1506,12 @@ def admin_payrolls(request, payroll_id=None):
                         if payroll:
                             try:
                                 payroll.date = salary_date
-                                payroll.salary_base = salary_base
+                                payroll.salary_brut = salary_brut
+                                payroll.cnss = salary_cnss
+                                payroll.irpp = salary_irpp
+                                payroll.other_deductions = salary_other_deductions
                                 payroll.commission = salary_commission
-                                payroll.updated_by = user
+                                payroll.updated_by = current_user
                                 payroll.updated_at = timezone.now()
                                 payroll.save()
                                 
@@ -1423,6 +1535,9 @@ def admin_payrolls(request, payroll_id=None):
                 try:
                     payroll = Payroll.objects.get(id=payroll_id)
                     payroll.deleted = True
+                    payroll.deleted_by = current_user
+                    payroll.deleted_at = timezone.now()
+                    
                     payroll.save()
                     # payroll.delete()
                     messages.success(request, 'paiement supprimé avec succès!')
@@ -1450,7 +1565,7 @@ def admin_payrolls(request, payroll_id=None):
 def view_shopping(request):
     """ A view that renders the bag contents page """
     if not request.session.get('shopping', {}):
-        messages.error(request, "Pas d'article en cours de vente pour le moment")
+        # messages.error(request, "Pas d'article en cours de vente pour le moment")
         return redirect(reverse('products'))
     
     clients = Client.objects.filter(deleted=False)
@@ -1518,13 +1633,17 @@ def adjust_shopping_quantity(request, item_id):
 def adjust_shopping_discount(request):
     """Adjust user discount of the specified product to the
     specified amount and display appropriate message"""
-    discount = float(request.POST.get('discount', 0.0))
     if request.POST:
+        discount = float(request.POST.get('discount', 0.0))
+        discount_type = request.POST.get('discount_type', 'percent')
+
         shopping = request.session.get('shopping', {})
         shopping['discount'] = discount
+        shopping['discount_type'] = discount_type
         request.session['shopping'] = shopping
-        messages.success(request, f'Updated user discount to {discount}')
+        messages.success(request, 'Mise à jour de la remise client bien effectuée')
     return redirect(reverse('view_shopping'))
+
 
 @login_required
 def remove_shopping_item(request, item_id):
@@ -1584,6 +1703,7 @@ def getAndSaveClientObject(request, employee, forceSave=False) -> (Client | None
             client.city = request.POST.get('client_city')
             client.company = request.POST.get('client_company')
             client.updated_by = employee
+            client.updated_at = timezone.now()
 
             # Check if the checkbox for creating or updating the user is checked
             if request.POST.get('create_update_user') == 'on' or forceSave:
@@ -1630,21 +1750,27 @@ def make_client_sale(request):
     if request.method == 'POST':
         rpg = request.POST.get
         try:
-            employee = Employee.objects.get(user=request.user)
+            current_user = Employee.objects.get(user=request.user)
         except Employee.DoesNotExist:
-            employee = None
+            current_user = None
              
-        if employee:
-            client = getAndSaveClientObject(request, employee, forceSave=True)
+        if current_user:
+            client = getAndSaveClientObject(request, current_user, forceSave=True)
             if client:
                 shopContents = shopping_contents(request)
                 totalHT = Decimal(shopContents['totalHT']) if shopContents and 'totalHT' in shopContents and shopContents['totalHT'] > 0 else None
-                discount = Decimal(shopContents['discount']) if shopContents and 'discount' in shopContents and shopContents['discount'] >= 0 else Decimal('0')
+                
                 payment_date = parseDatetime(rpg('payment_date')) if notEmpty(rpg('payment_date')) else ''
                 payment_due_date = parseDatetime(rpg('payment_due_date')) if notEmpty(rpg('payment_due_date')) else timezone.now()
                 tax_rate = safeDecimal(rpg('client_tax_rate')) if rpg('apply_tax') == 'on' and notEmpty(rpg('client_tax_rate')) else Decimal('0')
                 payment_status = rpg('client_payment_status')
                 payment_method = rpg('client_payment_method')
+                
+                if shopContents['discount_type'] == 'percent' or shopContents['discount_type'] == 'percent_small':
+                    saleTTC = float(totalHT) + (float(totalHT) * givenRate(tax_rate))
+                    discount = Decimal(saleTTC * givenRate(shopContents['discount'])) if saleTTC and saleTTC >= 0 and notEmpty(shopContents['discount']) and shopContents['discount'] > 0 else Decimal('0')
+                else:
+                    discount = Decimal(shopContents['discount']) if shopContents and 'discount' in shopContents and shopContents['discount'] >= 0 else Decimal('0')
             
                 if totalHT:
                     if not has_perm(request.user, create_permission):
@@ -1652,7 +1778,12 @@ def make_client_sale(request):
                         messages.error(request, unAutorizedMsg)
                         return redirect(reverse('home'))
                     
-                    sale = Sale(user=employee, client=client, discount=discount, ht_amount=totalHT, tax_rate=tax_rate, payment_due_date=payment_due_date)
+                    sale = Sale(user=current_user, client=client)
+                    sale.discount=discount
+                    sale.ht_amount=totalHT
+                    sale.tax_rate=tax_rate
+                    sale.payment_due_date=payment_due_date
+                    sale.created_at = timezone.now()
                     sale.save()
                     
                     makePayment = False
@@ -1671,10 +1802,10 @@ def make_client_sale(request):
                     try:
                         for shop in shopContents['shopping_items']:
                             product = Product.objects.get(id=shop['item_id'])
-                            items.append(SaleItem(sale=sale, product=product, quantity=shop['quantity'], price=product.price))
+                            items.append(SaleItem(sale=sale, product=product, user=current_user, quantity=shop['quantity'], price=product.price))
                         
                         if makePayment:
-                            payments.append(Payment(sale=sale, user=employee, amount=paidAmount, date=payment_date, method=payment_method, status=payment_status))
+                            payments.append(Payment(sale=sale, user=current_user, amount=paidAmount, date=payment_date, method=payment_method, status=payment_status))
                 
                         deleteShoppingData = False
 
@@ -1697,16 +1828,8 @@ def make_client_sale(request):
                             if 'shopping' in request.session:
                                 del request.session['shopping']
                                 
-                        # return redirect('sale_success', sale_id=sale.id)
-                        sale_items = sale.items
-                        paidAmount = sale.payments_amount
-                                        
-                        if sale and len(sale_items) > 0:
-                            arguments = {}
-                            return generate_sale_pdf(sale, sale_items, paidAmount, arguments)
-                        else:
-                            messages.error(request, 'Erreur: lors de la génération de la facture')
-                            return redirect(reverse('view_shopping'))
+                        messages.success(request, 'Vente effectuée avec succès!')
+                        return redirect('sale_success', sale_id=sale.id)
                         
                     except Exception:
                         messages.error(request, (
@@ -1737,13 +1860,13 @@ def sale_make_rest_payment(request, sale_id):
     if request.method == 'POST':
         rpg = request.POST.get
         try:
-            employee = Employee.objects.get(user=request.user)
+            current_user = Employee.objects.get(user=request.user)
             sale = Sale.objects.get(id=sale_id)
         except Exception:
-            employee = None
+            current_user = None
             sale = None
              
-        if employee and sale:
+        if current_user and sale:
             payment_date = parseDatetime(rpg('payment_date')) if notEmpty(rpg('payment_date')) else ''
             payment_status = rpg('client_payment_status')
             payment_method = rpg('client_payment_method')
@@ -1754,7 +1877,7 @@ def sale_make_rest_payment(request, sale_id):
                     messages.error(request, unAutorizedMsg)
                     return redirect(reverse('home'))
                 
-                payment = Payment(sale=sale, user=employee, amount=paidAmount, date=payment_date, method=payment_method, status=payment_status)
+                payment = Payment(sale=sale, user=current_user, amount=paidAmount, date=payment_date, method=payment_method, status=payment_status)
                 payment.save()
                 messages.success(request, 'Paiement effectué avec succès!')
             except Exception:
@@ -1794,10 +1917,16 @@ def print_sale(request, sale_id):
             if sale_id == 'sale_proformat':
                 client = getAndSaveClientObject(request, employee)
                 totalHT = Decimal(shopContents['totalHT']) if shopContents and 'totalHT' in shopContents and shopContents['totalHT'] > 0 else None
-                discount = Decimal(shopContents['discount']) if shopContents and 'discount' in shopContents and shopContents['discount'] >= 0 else Decimal('0')
                 payment_due_date = parseDatetime(rpg('payment_due_date')) if notEmpty(rpg('payment_due_date')) else timezone.now
                 tax_rate = safeDecimal(rpg('client_tax_rate')) if rpg('apply_tax') == 'on' and notEmpty(rpg('client_tax_rate')) else Decimal('0')
                 payment_status = rpg('client_payment_status')
+                
+                if shopContents['discount_type'] == 'percent' or shopContents['discount_type'] == 'percent_small':
+                    saleTTC = float(totalHT) + (float(totalHT) * givenRate(tax_rate))
+                    discount = Decimal(saleTTC * givenRate(shopContents['discount'])) if saleTTC and saleTTC >= 0 and notEmpty(shopContents['discount']) and shopContents['discount'] > 0 else Decimal('0')
+                else:
+                    discount = Decimal(shopContents['discount']) if shopContents and 'discount' in shopContents and shopContents['discount'] >= 0 else Decimal('0')
+            
                 
                 # payment_date = parseDatetime(rpg('payment_date')) if notEmpty(rpg('payment_date')) else ''
                 # payment_method = rpg('client_payment_method')
@@ -1860,8 +1989,15 @@ def update_sale_item_view(request, item_id):
                 messages.error(request, unAutorizedMsg)
                 return redirect(reverse('home'))
             
+            try:
+                current_user = Employee.objects.get(user=request.user)
+            except Exception:
+                current_user = None
+            
             saleItem = SaleItem.objects.get(id=item_id)
             saleItem.observation = request.POST.get('observation')
+            saleItem.updated_by = current_user
+            saleItem.updated_at = timezone.now()
             saleItem.save()
         except Exception:
             pass
@@ -1990,7 +2126,7 @@ def generate_sale_pdf(sale, sale_items, paidAmount, args={}):
     }}
     """
     
-    sale_name = 'Facture-Proformat' if args.get('is_proformat', False) else 'Facture'
+    sale_name = 'Facture-Proformat N°' if args.get('is_proformat', False) else 'Facture N°'
 
     # Render the sale as HTML
     html_string = render_to_string('sales/sale_print.html', {
@@ -2009,7 +2145,7 @@ def generate_sale_pdf(sale, sale_items, paidAmount, args={}):
     pdf = html.write_pdf(stylesheets=[CSS(string=css_string)])
 
     # Save PDF to file (temporary location)
-    output_filename = f"facture-{sale.id}.pdf"
+    output_filename = f"facture-{sale.invoice_number}.pdf"
     output_path = os.path.join(settings.MEDIA_ROOT, 'factures', output_filename)
     
     if args.get('save_pdf_file', False):
@@ -2028,7 +2164,7 @@ def generate_sale_pdf(sale, sale_items, paidAmount, args={}):
         save_pdf_file(output_path, pdf)
             
         email_subject = f'Votre {sale_name} de chez {app_site.name}'
-        email_body = f'Salut {sale.client.full_name},\n\nVeuillez trouver ci-joint votre {sale_name} n°{sale.id}.\n\nMerci !\n\n\n{app_site.name}\n{app_site.email}\n{app_site.phone_number}\n{app_site.address}'
+        email_body = f'Salut {sale.client.full_name},\n\nVeuillez trouver ci-joint votre {sale_name} n°{sale.invoice_number}.\n\nMerci !\n\n\n{app_site.name}\n{app_site.email}\n{app_site.phone_number}\n{app_site.address}'
         send_email_with_attachment(client_email, email_subject , email_body, output_path)
     return response
 
@@ -2039,7 +2175,15 @@ def sale_success(request, sale_id):
     """
     try:
         sale = Sale.objects.get(id=sale_id)
-        messages.success(request, 'Vente effectuée avec succès!')
+        sale_items = sale.items
+        paidAmount = sale.payments_amount
+                        
+        if sale and len(sale_items) > 0:
+            arguments = {}
+            return generate_sale_pdf(sale, sale_items, paidAmount, arguments)
+        # else:
+        #     messages.error(request, 'Erreur: lors de la génération de la facture')
+        #     return redirect(reverse('view_shopping'))
     except Exception:
         messages.error(request, 'Erreur lors de la vente!')
 
@@ -2086,15 +2230,15 @@ def payroll_dashboard(request):
         monthly_salaries = {'employee': employee}
         for month in monthsRange:  # Loop through months 1 to 12
             # Filter Payroll records for the current employee, month, year, and not deleted
-            total_salary = Payroll.objects.filter(
+            total_net_salary = Payroll.objects.filter(
                 employee=employee,
                 date__month=month,
                 date__year=year,
                 deleted=False
-            ).aggregate(total=Sum('salary_base') + Sum('commission'))['total'] or 0
+            ).aggregate(total=Sum('salary_net'))['total'] or 0
             
             # Store the total salary in the corresponding month key
-            monthly_salaries[months[month]] = total_salary
+            monthly_salaries[months[month]] = total_net_salary
         global_sum = sum(monthly_salaries[months[m]] for m in monthsRange)
         
         if global_sum > 0:
@@ -2173,517 +2317,3 @@ def sale_dashboard(request):
 
     return render(request, 'dashboards/sale_dashboard.html', context)
 
-# @login_required
-# def all_users(request):
-#     """ Add a users to the store """
-#     if not request.user.is_superuser:
-#         messages.error(request, 'Sorry, only store owners can do that.')
-#         return redirect(reverse('home'))
-    
-#     if request.method == 'POST':
-#         form = ClientForm(request.POST)
-#         if form.is_valid():
-#             users = form.save()
-#             messages.success(request, 'Successfully added users!')
-#             return redirect(reverse('users_detail', args=[users.id]))
-#         else:
-#             messages.error(request, 'Failed to add users. Please ensure the form is valid.')
-#     else:
-#         form = ClientForm()
-
-#     clients = Client.objects.filter(deleted=False)
-
-#     return render(request, 'userss/add_users.html', { 'form': form, 'clients': clients })
-
-
-
-# @login_required
-# def employee(request):
-#     """ Display the user's employee. """
-#     try:
-#         employee = Employee.objects.get(user=request.user)
-#     except Exception:
-#         employee = None
-        
-#     if employee:
-#         if request.method == 'POST':
-#             form = EmployeeForm(request.POST, instance=employee)
-#             if form.is_valid():
-#                 form.save()
-#                 messages.success(request, 'Employee updated successfully')
-#             else:
-#                 messages.error(request, 'Update failed. Please ensure the form is valid.')
-#         else:
-#             form = EmployeeForm(instance=employee)
-#         orders = employee.orders.filter(deleted=False)
-        
-#         return render(request, 'employees/employee.html', {'form': form, 'orders': orders, 'on_employee_page': True})
-#     else:
-#         return redirect('products')
-
-
-# @login_required
-# @permission_required('auth.change_user', raise_exception=True)
-# def user_permissions(request):
-#     users = User.objects.all()
-#     permissions = Permission.objects.all()
-
-#     if request.method == 'POST':
-#         user_id = request.POST.get('user_id')
-#         permission_ids = request.POST.getlist('permissions')
-        
-#         user = User.objects.get(id=user_id)
-#         # Clear existing permissions
-#         user.user_permissions.clear()
-        
-#         # Add selected permissions
-#         for perm_id in permission_ids:
-#             perm = Permission.objects.get(id=perm_id)
-#             user.user_permissions.add(perm)
-
-#         return redirect('user_permissions')
-
-#     context = {
-#         'users': users,
-#         'permissions': permissions,
-#     }
-#     return render(request, 'admins/user_permissions.html', context)
-
-
-# @login_required
-# def payroll_dashboard(request):
-#     year = request.GET.get('year', date.today().year)  # Get the year from the dropdown or default to the current year
-#     employees = Employee.objects.all()
-#     # months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-    
-#     salaries = []
-#     for employee in employees:
-#         monthly_salaries = {
-#             'employee': employee,
-#             'jan': Payroll.objects.filter(employee=employee, date__month=1, date__year=year).aggregate(Sum('total_salary'))['total_salary__sum'] or 0,
-#             'fev': Payroll.objects.filter(employee=employee, date__month=2, date__year=year).aggregate(Sum('total_salary'))['total_salary__sum'] or 0,
-#             'mar': Payroll.objects.filter(employee=employee, date__month=3, date__year=year).aggregate(Sum('total_salary'))['total_salary__sum'] or 0,
-#             'avr': Payroll.objects.filter(employee=employee, date__month=4, date__year=year).aggregate(Sum('total_salary'))['total_salary__sum'] or 0,
-#             'mai': Payroll.objects.filter(employee=employee, date__month=5, date__year=year).aggregate(Sum('total_salary'))['total_salary__sum'] or 0,
-#             'jui': Payroll.objects.filter(employee=employee, date__month=6, date__year=year).aggregate(Sum('total_salary'))['total_salary__sum'] or 0,
-#             'jul': Payroll.objects.filter(employee=employee, date__month=7, date__year=year).aggregate(Sum('total_salary'))['total_salary__sum'] or 0,
-#             'aou': Payroll.objects.filter(employee=employee, date__month=8, date__year=year).aggregate(Sum('total_salary'))['total_salary__sum'] or 0,
-#             'sep': Payroll.objects.filter(employee=employee, date__month=9, date__year=year).aggregate(Sum('total_salary'))['total_salary__sum'] or 0,
-#             'oct': Payroll.objects.filter(employee=employee, date__month=10, date__year=year).aggregate(Sum('total_salary'))['total_salary__sum'] or 0,
-#             'nov': Payroll.objects.filter(employee=employee, date__month=11, date__year=year).aggregate(Sum('total_salary'))['total_salary__sum'] or 0,
-#             'dec': Payroll.objects.filter(employee=employee, date__month=12, date__year=year).aggregate(Sum('total_salary'))['total_salary__sum'] or 0,
-#         }
-#         salaries.append(monthly_salaries)
-        
-#     context = {
-#         'salaries': salaries,
-#         'year': year,
-#     }
-    
-#     return render(request, 'dashboards/payroll_dashboard.html', context)
-
-# def salaries_dashboard(request):
-#     year = request.GET.get('year', datetime.now().year)
-#     payrolls = Payroll.objects.filter(date__year=year, deleted=False).order_by('date', 'employee__user__username')
-    
-#     # Structure the payroll data by employee and months
-#     salaries = {}
-#     for payroll in payrolls:
-#         emp = payroll.employee
-#         emp_name = emp.full_name
-#         month = payroll.date.strftime('%B')  # Get month name
-#         if emp_name not in salaries:
-#             salaries[emp_name] = {month: payroll.total_salary}
-#         else:
-#             salaries[emp_name][month] = payroll.total_salary
-
-#     # List of months in correct order for display
-#     months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-
-#     context = {
-#         'salaries': salaries,
-#         'months': months,
-#         'year': year
-#     }
-#     return render(request, 'dashboards/salaries_dashboard.html', context)
-
-# @login_required
-# def clients_payments_dashboard(request):
-#     # Get the selected year from the request, default to the current year
-#     year = request.GET.get('year', datetime.now().year)
-
-#     # Query all employees
-#     employees = Employee.objects.all()
-
-#     # Prepare salary data for each employee, grouped by month
-#     salaries = []
-#     for employee in employees:
-#         monthly_salaries = {
-#             'user': employee,
-#             'jan': Payment.objects.filter(user=employee, date__month=1, date__year=year).aggregate(Sum('amount'))['amount__sum'] or 0,
-#             'fev': Payment.objects.filter(user=employee, date__month=2, date__year=year).aggregate(Sum('amount'))['amount__sum'] or 0,
-#             'mar': Payment.objects.filter(user=employee, date__month=3, date__year=year).aggregate(Sum('amount'))['amount__sum'] or 0,
-#             'avr': Payment.objects.filter(user=employee, date__month=4, date__year=year).aggregate(Sum('amount'))['amount__sum'] or 0,
-#             'mai': Payment.objects.filter(user=employee, date__month=5, date__year=year).aggregate(Sum('amount'))['amount__sum'] or 0,
-#             'jui': Payment.objects.filter(user=employee, date__month=6, date__year=year).aggregate(Sum('amount'))['amount__sum'] or 0,
-#             'jul': Payment.objects.filter(user=employee, date__month=7, date__year=year).aggregate(Sum('amount'))['amount__sum'] or 0,
-#             'aou': Payment.objects.filter(user=employee, date__month=8, date__year=year).aggregate(Sum('amount'))['amount__sum'] or 0,
-#             'sep': Payment.objects.filter(user=employee, date__month=9, date__year=year).aggregate(Sum('amount'))['amount__sum'] or 0,
-#             'oct': Payment.objects.filter(user=employee, date__month=10, date__year=year).aggregate(Sum('amount'))['amount__sum'] or 0,
-#             'nov': Payment.objects.filter(user=employee, date__month=11, date__year=year).aggregate(Sum('amount'))['amount__sum'] or 0,
-#             'dec': Payment.objects.filter(user=employee, date__month=12, date__year=year).aggregate(Sum('amount'))['amount__sum'] or 0,
-#         }
-#         salaries.append(monthly_salaries)
-
-#     context = {
-#         'salaries': salaries,
-#         'year': year,
-#     }
-#     return render(request, 'dashboards/clients_payments_dashboard.html', context)
-
-
-# @login_required
-# def admin_list_add_clients(request):
-#     """ Add a client to the store """
-#     if not request.user.is_superuser:
-#         messages.error(request, 'Sorry, only store owners can do that.')
-#         return redirect(reverse('home'))
-
-#     if request.method == 'POST':
-#         form = ClientForm(request.POST, request.FILES)
-#         if form.is_valid():
-#             client = form.save()
-#             messages.success(request, f'Successfully added client: {client.first_name}')
-#             # return redirect(reverse('client_detail', args=[client.id]))
-#             form = ClientForm()  # Reset the form to be empty
-#         else:
-#             messages.error(request, 'Failed to add client. Please ensure the form is valid.')
-#     else:
-#         form = ClientForm()  # Create a new empty form for GET requests
-
-#     clients = Client.objects.filter(deleted=False)
-#     return render(request, 'clients/admin_clients.html', { 'form': form, 'clients': clients })
-
-# @login_required
-# def admin_edit_client(request, client_id):
-#     """ Edit a client in the store """
-#     if not request.user.is_superuser:
-#         messages.error(request, 'Sorry, only store owners can do that.')
-#         return redirect(reverse('home'))
-    
-#     client = Client.objects.get(pk=client_id)
-    
-#     if not client:
-#         return redirect(reverse('admin_list_add_clients'))
-        
-#     if request.method == 'POST':
-#         form = ClientForm(request.POST, request.FILES, instance=client)
-#         if form.is_valid():
-#             form.save()
-#             messages.success(request, 'Successfully updated client!')
-#             # return redirect(reverse('client_detail', args=[client.id]))
-#             return redirect(reverse('admin_list_add_clients'))
-#         else:
-#             messages.error(request, 'Failed to update client. Please ensure the form is valid.')
-#     else:
-#         form = ClientForm(instance=client)
-#         # messages.info(request, f'You are editing {client.full_name}')
-        
-
-#     return render(request, 'clients/admin_edit_client.html', { 'form': form, 'client': client, })
-
-# @login_required
-# def admin_delete_client(request, client_id):
-#     """ Delete a client from the store """
-#     if not request.user.is_superuser:
-#         messages.error(request, 'Sorry, only store owners can do that.')
-#         return redirect(reverse('admin_list_add_clients'))
-
-#     try:
-#         client = Client.objects.get(id=client_id)
-#         client.deleted = True
-#         client.save()
-#         #client.delete()
-#         messages.success(request, 'Client deleted successfully!')
-#     except Client.DoesNotExist:
-#         messages.error(request, 'Client not found.')
-    
-#     return redirect(reverse('admin_list_add_clients'))
-
-###### SHOPPING ######
-
-#######################################################################""
-# @login_required
-# def all_clients(request):
-#     """ Add a product to the store """
-#     if not request.user.is_superuser:
-#         messages.error(request, 'Sorry, only store owners can do that.')
-#         return redirect(reverse('home'))
-    
-#     if request.method == 'POST':
-#         form = ClientForm(request.POST)
-#         if form.is_valid():
-#             product = form.save()
-#             messages.success(request, 'Successfully added product!')
-#             return redirect(reverse('product_detail', args=[product.id]))
-#         else:
-#             messages.error(request, 'Failed to add product. Please ensure the form is valid.')
-#     else:
-#         form = ClientForm()
-
-#     clients = Client.objects.filter(deleted=False)
-
-#     return render(request, 'products/add_product.html', { 'form': form, 'clients': clients })
-
-# @login_required
-# def client_detail(request, client_id):
-#     """ A view to show individual client details """
-#     try:
-#         client = Client.objects.get(pk=client_id)
-#         return render(request, 'clients/client_detail.html', { 'client': client })
-#     except Exception:
-#         messages.error(request, 'Erreur rencontrée, réessayer!')
-#         return redirect('home')
-
-# @login_required
-# def add_client(request):
-#     """ Add a product to the store """
-#     if not request.user.is_superuser:
-#         messages.error(request, 'Sorry, only store owners can do that.')
-#         return redirect(reverse('home'))
-    
-#     redirect_url = request.POST.get('redirect_url', 'products')
-
-#     if request.method == 'POST':
-#         form = ClientForm(request.POST)
-#         if form.is_valid():
-#             product = form.save()
-#             messages.success(request, 'Successfully added product!')
-#             return redirect(reverse('product_detail', args=[product.id]))
-#         else:
-#             messages.error(request, 'Failed to add product. Please ensure the form is valid.')
-#     return redirect(reverse(redirect_url))
-
-# @login_required
-# def edit_client(request, client_id):
-#     """ Edit a client in the store """
-#     try:
-#         client = Client.objects.get(pk=client_id)
-#     except Exception:
-#         client = None
-        
-#     if client:
-#         if request.method == 'POST':
-#             form = ClientForm(request.POST, request.FILES, instance=client)
-#             if form.is_valid():
-#                 form.save()
-#                 messages.success(request, 'Successfully updated client!')
-#                 return redirect(reverse('client_detail', args=[client.id]))
-#             else:
-#                 messages.error(request, 'Failed to update client. Please ensure the form is valid.')
-#         else:
-#             form = ClientForm(instance=client)
-#             messages.info(request, f'You are editing {client.full_name}')
-
-#         return render(request, 'clients/edit_client.html', { 'form': form, 'client': client })
-#     else:
-#         return redirect(reverse('home'))
-
-# @login_required
-# def delete_client(request, client_id):
-#     """ Delete a client from the store """
-#     try:
-#         client = Client.objects.get(pk=client_id)
-#         client.deleted = True
-#         client.save()
-#         # client.delete()
-#         messages.success(request, 'client supprimé avec succès!')
-#     except Exception:
-#         messages.error(request, 'Impossible de supprimer ce client!')
-#     return redirect(reverse('clients'))
-
-
-# @login_required
-# def update_sale(request):
-#     if request.method == 'POST':
-#         client_id = request.POST.get('client_id')
-#         sale_id = request.POST.get('sale_id')
-        
-#         if notEmpty(client_id) and notEmpty(client_id):
-#             client = Client.objects.get(id=client_id)
-#             sale = Sale.objects.get(id=sale_id)
-            
-#     #         total_amount = 0
-#     #         sale_items = []  # Pour garder les nouveaux items pour mise à jour
-
-#     #         for product_id, quantity in request.POST.items():
-#     #             if product_id.startswith('product_'):
-#     #                 product = Product.objects.get(id=int(product_id.split('_')[1]))
-#     #                 quantity = int(quantity)
-#     #                 if product.stock >= quantity:
-#     #                     price = product.get_discounted_price()
-#     #                     total_amount += price * quantity
-#     #                     sale_item, created = SaleItem.objects.get_or_create(
-#     #                         sale=sale,
-#     #                         product=product,
-#     #                         defaults={'quantity': quantity, 'price': price}
-#     #                     )
-#     #                     if not created:
-#     #                         # Mettre à jour l'item existant
-#     #                         sale_item.quantity = quantity
-#     #                         sale_item.price = price
-#     #                         sale_item.save()
-
-#     #                     sale_items.append(sale_item)
-#     #                     product.stock -= quantity
-#     #                     product.save()
-#     #                 else:
-#     #                     messages.error(request, f"Stock insuffisant pour {product.name}")
-
-#     #         # Met à jour le montant total de la facture
-#     #         sale.total_amount = total_amount
-#     #         sale.save()
-
-#     #         # Mise à jour de la fidélité client
-#     #         points_earned = update_loyalty_points(client, sale)
-#     #         messages.success(request, f"Facture mise à jour avec succès. Points gagnés : {points_earned}")
-
-#     #         return redirect('sales:sale_detail', sale_id=sale.id)
-
-#     # return render(request, 'sales/create_sale.html', {'client': client, 'products': products, 'sale': sale})
-
-# @login_required
-# def sale_list(request):
-#     sales = Sale.objects.filter(deleted=False)
-#     return render(request, 'sales/sale_list.html', {'sales': sales})
-
-# @login_required
-# def sale_detail(request, sale_id):
-#     sale = Sale.objects.get(id=sale_id)
-#     return render(request, 'sales/sale_detail.html', {'sale': sale})
-
-# @login_required
-# def delete_sale(request, sale_id):
-#     sale = Sale.objects.get(id=sale_id)
-#     sale.delete()
-#     return redirect(reverse('sales:sale_list'))
-
-
-################################################
-
-
-# def update_loyalty_points(client, sale):
-#     points_earned = int(sale.total_amount // 10)  # 1 point pour chaque 10 FCFA dépensés
-#     client.points += points_earned
-#     client.save()
-#     LoyaltyHistory.objects.create(client=client, points_earned=points_earned, description=f"Points pour facture {sale.id}")
-#     return points_earned
-
-# def make_payment(request, sale_id):
-#     try:
-#         sale = Sale.objects.get(id=sale_id)
-#         if request.method == 'POST':
-#             amount = request.POST.get('amount')
-#             method = request.POST.get('method')
-#             Payment.objects.create(sale=sale, amount=amount, method=method)
-#             sale.paid = True
-#             sale.payment_date = timezone.now()
-#             sale.status = 'paid'
-#             sale.save()
-#             messages.success(request, "Paiement effectué avec succès.")
-#             return redirect('sale_detail', sale_id=sale_id)
-#     except Exception:
-#         sale = {}
-#     return render(request, 'sales/make_payment.html', {'sale': sale})
-
-
-
- 
-# class RegisterView(CreateView):
-#     model = AppUser
-#     form_class = AppUserCreationForm
-#     template_name = 'accounts/register.html'
-#     success_url = reverse_lazy('login')
-
-#     def form_valid(self, form):
-#         user = form.save(commit=False)
-#         user.is_active = False
-#         user.save()
-#         self.send_activation_email(user)
-#         messages.success(self.request, _('Please confirm your email address to complete the registration.'))
-#         return redirect(self.success_url)
-
-#     def send_activation_email(self, user):
-#         current_site = get_current_site(self.request)
-#         subject = 'Activate Your Account'
-#         message = render_to_string('accounts/account_activation_email.html', {
-#             'user': user,
-#             'domain': current_site.domain,
-#             'uid': urlsafe_base64_encode(force_bytes(user.pk)),
-#             'token': account_activation_token.make_token(user),
-#         })
-#         send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
-        
-        
-        
-
-# class CustomLoginView(LoginView):
-#     template_name = 'accounts/login.html'
-
-#     def form_valid(self, form):
-#         remember_me = self.request.POST.get('remember_me', False)
-#         if not remember_me:
-#             self.request.session.set_expiry(0)  # Session expires on browser close
-#         return super().form_valid(form)
-
-# class CustomLogoutView(LogoutView):
-#     next_page = 'login'
-
-# class EmployeeUpdateView(UpdateView):
-#     model = AppUser
-#     form_class = AppUserChangeForm
-#     template_name = 'accounts/employee_update.html'
-#     success_url = reverse_lazy('employee')
-
-#     def get_object(self):
-#         return self.request.user
-
-#     def form_valid(self, form):
-#         messages.success(self.request, _('Your employee has been updated successfully.'))
-#         return super().form_valid(form)
-
-# class CustomPasswordResetView(PasswordResetView):
-#     template_name = 'accounts/password_reset.html'
-#     email_template_name = 'accounts/password_reset_email.html'
-#     subject_template_name = 'accounts/password_reset_subject.txt'
-#     success_url = reverse_lazy('password_reset_done')
-
-# class CustomPasswordResetConfirmView(PasswordResetConfirmView):
-#     template_name = 'accounts/password_reset_confirm.html'
-#     success_url = reverse_lazy('login')
-
-# # Additional Utility View for Handling User Email Verification Resend
-# class ResendActivationEmailView(View):
-#     def get(self, request):
-#         return render(request, 'accounts/resend_activation_email.html')
-
-#     def post(self, request):
-#         email = request.POST.get('email')
-#         try:
-#             user = AppUser.objects.get(email=email, is_active=False)
-#             RegisterView().send_activation_email(user)
-#             messages.success(request, _('A new activation email has been sent to your email address.'))
-#             return redirect('login')
-#         except AppUser.DoesNotExist:
-#             messages.error(request, _('There is no inactive user with that email address.'))
-#             return redirect('resend_activation_email')
-
-# # Example Password Change View
-# class PasswordChangeView(View):
-#     def get(self, request):
-#         return render(request, 'accounts/password_change.html')
-
-#     def post(self, request):
-#         # Handle password change logic
-#         # Implement this method if using a custom form for password change
-#         pass

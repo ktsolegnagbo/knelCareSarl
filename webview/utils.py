@@ -10,6 +10,13 @@ from django.utils.html import strip_tags
 from django.conf import settings
 from datetime import datetime
 
+
+def givenRate(rate):
+    rateBrut = (float(rate) if rate and rate is not None and rate > 0 else 0.0)
+    finalRate = (rateBrut / 100) if rateBrut > 1 else rateBrut
+    return finalRate
+
+
 def createAppSite(id=1):
     from django.contrib.sites.models import Site
     from webview.models import AppSite
@@ -34,9 +41,13 @@ def createAppSite(id=1):
         # Set AppSite fields correctly (no commas at the end)
         app_site.id = site.id
         app_site.email = AppSite.EMAIL
+        app_site.owner_email = AppSite.OWNER_EMAIL
         app_site.phone_number = AppSite.PHONE1
         app_site.phone_number_other = AppSite.PHONE2
         app_site.address = AppSite.ADDRESS
+        app_site.info = AppSite.INFO
+        app_site.recip = AppSite.RECIP
+
         app_site.save()
 
         return True

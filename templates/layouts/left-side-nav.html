@@ -35,7 +35,7 @@
         <li class="menu-item">
             <a href="{% url 'admin_list_categories' %}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-collection"></i>
-                <div data-i18n="Basic">Admin des Categories</div>
+                <div data-i18n="Basic">Liste des Categories</div>
             </a>
         </li>
         {% endif %}
@@ -44,7 +44,7 @@
         <li class="menu-item">
             <a href="{% url 'admin_list_products' %}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-collection"></i>
-                <div data-i18n="Basic">Admin des Articles</div>
+                <div data-i18n="Basic">Liste des Articles</div>
             </a>
         </li>
         {% endif %}
@@ -53,7 +53,16 @@
         <li class="menu-item">
             <a href="{% url 'admin_list_stocks' %}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-collection"></i>
-                <div data-i18n="Basic">Admin des Stock</div>
+                <div data-i18n="Basic">Liste des Stocks</div>
+            </a>
+        </li>
+        {% endif %}
+
+        {% if  request.user|can_view_expired_stock and request.user|is_administrator %}
+        <li class="menu-item">
+            <a href="{% url 'admin_list_expired_stocks' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-collection"></i>
+                <div data-i18n="Basic">Liste Stocks Périmés</div>
             </a>
         </li>
         {% endif %}
@@ -62,7 +71,7 @@
         <li class="menu-item">
             <a href="{% url 'admin_list_clients' %}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-collection"></i>
-                <div data-i18n="Basic">Admin des Client</div>
+                <div data-i18n="Basic">Liste des Clients</div>
             </a>
         </li>
         {% endif %}
@@ -71,7 +80,7 @@
         <li class="menu-item">
             <a href="{% url 'admin_list_sales' %}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-collection"></i>
-                <div data-i18n="Basic">Admin des Ventes</div>
+                <div data-i18n="Basic">Liste des Ventes</div>
             </a>
         </li>
         {% endif %}
@@ -80,7 +89,7 @@
         <li class="menu-item">
             <a href="{% url 'admin_list_users' %}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-collection"></i>
-                <div data-i18n="Basic">Admin des Users</div>
+                <div data-i18n="Basic">Liste des Employées</div>
             </a>
         </li>
         {% endif %}
@@ -89,7 +98,7 @@
         <li class="menu-item">
             <a href="{% url 'admin_list_payrolls' %}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-collection"></i>
-                <div data-i18n="Basic">Admin des Salaires</div>
+                <div data-i18n="Basic">Liste Salaires Payés</div>
             </a>
         </li>
         {% endif %}

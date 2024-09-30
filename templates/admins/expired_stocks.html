@@ -22,20 +22,20 @@
 {% endblock %}
 
 {% block content %}
-  {% if  request.user|can_view_stock and request.user|is_administrator %}
+  {% if  request.user|can_view_expired_stock and request.user|is_administrator %}
     <div class="card">
     <div style="height: 60px; padding: 10px;" class="card-header">
-      {% if  request.user|can_create_stock %}
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#adminAddOrUpdateStockModal" data-action-type="create">
-          <b style="font-size: 18px;">Ajouter un nouveau stock</b>
+      {% if  request.user|can_create_expired_stock %}
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#adminAddOrUpdateExpiredStockModal" data-action-type="create">
+          <b style="font-size: 18px;">Déclarer un stock périmé</b>
         </button>
       {% endif %}
 
-      {% if stocks|length > 0 %}
-        <button style="background:orange; padding: 5px;font-size:14px; margin-left: 20px;" class="btn btn-warning"  id="exportBtn1" onclick="ExportTableData('dataTable', 'stocks');">Télécharger en Excel</button>
+      {% if expired_stocks|length > 0 %}
+        <button style="background:orange; padding: 5px;font-size:14px; margin-left: 20px;" class="btn btn-warning"  id="exportBtn1" onclick="ExportTableData('dataTable', 'expired_stocks');">Télécharger en Excel</button>
       {% endif %}
 
-      <h4 style="float: right;">Liste des stocks</h4>
+      <h4 style="float: right;">Liste des stocks périmés</h4>
     </div>
 
     <div class="table-responsive text-nowrap">
@@ -45,13 +45,13 @@
             <th data-exclude="true" colspan="11">
               <form action="" method="post">
                 {% csrf_token %}
-                <input type="hidden" name="user_action" value="stocks_filter">
+                <input type="hidden" name="user_action" value="expired_stocks_filter">
 
                 <div style="width: 250px;" class="input-group input-group-merge">
-                  <select style="font-weight: bold;" name="employee_stocks" id="employee-stocks" class="form-select">
+                  <select style="font-weight: bold;" name="employee_expired_stocks" id="employee-expired-stocks" class="form-select">
                       <option value="">Tous</option>
-                      {% for stock in stocks %}
-                          <option value="{{ stock.id }}" {% if stock.id in filter_stocks %}selected{% endif %}>{{ stock.name }}</option>
+                      {% for expired_stock in expired_stocks %}
+                          <option value="{{ expired_stock.id }}" {% if expired_stock.id in expired_filter_stocks %}selected{% endif %}>{{ expired_stock.name }}</option>
                       {% endfor %}
                   </select>
                   <button type="submit" class="input-group-text">
@@ -63,10 +63,10 @@
           </tr>
         </thead> -->
 
-        {% if stocks|length > 0 %}
+        {% if expired_stocks|length > 0 %}
           <thead class="table-dark">
             <tr style="display: none;">
-              <th colspan="4">Liste des stocks</th>
+              <th colspan="3">Liste des stocks périmés</th>
             </tr>
 
             <tr>
@@ -74,29 +74,27 @@
               <th data-exclude="true" style="color: white;">Image</th>
               <th style="color: white;">Nom Produit</th>
               <th style="color: white;">Quantité</th>
-              <th style="color: white;">Prix d'Achat ( {{ price_unit }} )</th>
-              <th style="color: white;">Total Achat ( {{ price_unit }} )</th>
               <th style="color: white;">Date de péromption</th>
             </tr>
           </thead>
           <tbody class="table-border-bottom-0">
-            {% for stock in stocks %} 
+            {% for expired_stock in expired_stocks %} 
               <tr>
 
                 <td data-exclude="true">
-                  {% if  request.user|can_update_stock or request.user|can_delete_stock %}
+                  {% if  request.user|can_update_expired_stock or request.user|can_delete_expired_stock %}
                     <div class="dropdown">
                       <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
                         <i style="font-size: 25px;" class="bx bx-dots-vertical-rounded"></i>
                       </button>
                       <div class="dropdown-menu">
-                        {% if  request.user|can_update_stock %}
-                          <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminAddOrUpdateStockModal" data-stock="{{ stock.toMap }}" data-action-type="update">
+                        {% if  request.user|can_update_expired_stock %}
+                          <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminAddOrUpdateExpiredStockModal" data-expired-stock="{{ expired_stock.toMap }}" data-action-type="update">
                             <i class="bx bx-edit-alt me-1"></i> Modifier
                           </button>
                         {% endif %}
-                        {% if  request.user|can_delete_stock %}
-                          <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminDeleteStockModal" data-id="{{ stock.id }}" data-name="{{ stock.name }}">
+                        {% if  request.user|can_delete_expired_stock %}
+                          <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminDeleteExpiredExpiredStockModal" data-id="{{ expired_stock.id }}" data-name="{{ expired_stock.name }}">
                             <i class="bx bx-trash me-1"></i>  Supprimer
                           </button>
                         {% endif %}
@@ -105,14 +103,11 @@
                   {% endif %}
                 </td>
                   <td data-exclude="true">
-                    <img style="height: 30px; max-width: 60px;" src="{{ stock.product.imageUrl }}" alt="{{ stock.product.name }}">
+                    <img style="height: 30px; max-width: 60px;" src="{{ expired_stock.product.imageUrl }}" alt="{{ expired_stock.product.name }}">
                   </td>
-                  <td><strong>{{ stock.product.name }}</strong></td>
-                  <td>{{ stock.quantity }}</td>
-                  <td>{{ stock.price|floatformat:0|separate_millier }}</td>
-                  <td>{{ stock.amount|floatformat:0|separate_millier }}</td>
-                  <td>{{ stock.expiration_date }}</td>
-                  
+                  <td><strong>{{ expired_stock.product.name }}</strong></td>
+                  <td>{{ expired_stock.quantity }}</td>
+                  <td>{{ expired_stock.expiration_date }}</td>
                   
               </tr>
             {% endfor %}
@@ -131,18 +126,18 @@
 
 
 {% block modalsBlock %}
-  <div class="modal fade" id="adminAddOrUpdateStockModal" data-bs-backdrop="static" tabindex="-1">
+  <div class="modal fade" id="adminAddOrUpdateExpiredStockModal" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog">
-      <form  id="adminAddOrUpdateStockFormModal" method="POST" action="" class="form modal-content" enctype="multipart/form-data">
+      <form  id="adminAddOrUpdateExpiredStockFormModal" method="POST" action="" class="form modal-content" enctype="multipart/form-data">
 
         <div class="modal-header">
-          <h5 class="modal-title" id="adminAddOrUpdateStockModalTitle"></h5>
+          <h5 class="modal-title" id="adminAddOrUpdateExpiredStockModalTitle"></h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
 
         <div class="modal-body">
           {% csrf_token %} 
-          <input type="hidden" name="stock_action" value="">
+          <input type="hidden" name="expired_stock_action" value="">
           {% for field in form %} 
               <div class="mb-2">
                   {{ field | as_crispy_field }} 
@@ -157,23 +152,23 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
           
-          <button id="adminAddOrUpdateStockSubmitBtnModal" type="submit" class="btn btn-primary"></button>
+          <button id="adminAddOrUpdateExpiredStockSubmitBtnModal" type="submit" class="btn btn-primary"></button>
         </div>
 
       </form>
     </div>
   </div>
 
-  <div class="modal fade" id="adminDeleteStockModal" data-bs-backdrop="static" tabindex="-1">
+  <div class="modal fade" id="adminDeleteExpiredStockModal" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="logoutModalTitle">Suppression de stock</h5>
+                <h5 class="modal-title" id="logoutModalTitle">Suppression de stock périmé</h5>
                 <!-- <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> -->
             </div>
             <div class="modal-body">
                 <label for="nameBackdrop" class="form-label">
-                  Êtes-vous sûr de vouloir supprimer le stock <strong id="stock-name"></strong> ?
+                  Êtes-vous sûr de vouloir supprimer le stock périmé<strong id="expired-stock-name"></strong> ?
                 </label>
             </div>
             <div class="modal-footer">
@@ -183,7 +178,7 @@
 
                 <form id="delete-form" action="" method="post">
                     {% csrf_token %}
-                    <input type="hidden" name="stock_action" value="delete">
+                    <input type="hidden" name="expired_stock_action" value="delete">
                     <button type="submit" class="btn btn-danger">Oui, supprimer</button>
                 </form>
 
@@ -202,28 +197,52 @@
        $("#filename").text(`Image will be set to: ${file.name}`);
    });
 
+function getDateTime(){
+   var now = new Date();
+   var year = now.getFullYear();
+   var month = ("0" + (now.getMonth() + 1)).slice(-2); // Add leading zero
+   var day = ("0" + now.getDate()).slice(-2); // Add leading zero
+   var hours = ("0" + now.getHours()).slice(-2); // Add leading zero
+   var minutes = ("0" + now.getMinutes()).slice(-2); // Add leading zero
+   var datetimeValue = year + "-" + month + "-" + day + "T" + hours + ":" + minutes;
+   // Set the datetime input value
+   return datetimeValue;
+}
+
+function getDate(){
+   var now = new Date();
+   var year = now.getFullYear();
+   var month = ("0" + (now.getMonth() + 1)).slice(-2); // Add leading zero
+   var day = ("0" + now.getDate()).slice(-2); // Add leading zero
+   var hours = ("0" + now.getHours()).slice(-2); // Add leading zero
+   var minutes = ("0" + now.getMinutes()).slice(-2); // Add leading zero
+   var datetimeValue = year + "-" + month + "-" + day;
+   // Set the datetime input value
+   return datetimeValue;
+}
+
   document.addEventListener('DOMContentLoaded', function () {
-      const deleteModal = document.getElementById('adminDeleteStockModal');
-      const stockNameElement = document.getElementById('stock-name');
+      const deleteModal = document.getElementById('adminDeleteExpiredStockModal');
+      const expiredStockNameElement = document.getElementById('expired-stock-name');
       const deleteForm = document.getElementById('delete-form');
 
       deleteModal.addEventListener('show.bs.modal', function (event) {
           const button = event.relatedTarget; // Button that triggered the modal
-          const stockId = button.getAttribute('data-id');
-          const stockName = button.getAttribute('data-name');
-          stockNameElement.textContent = stockName;
+          const expiredStockId = button.getAttribute('data-id');
+          const expiredStockName = button.getAttribute('data-name');
+          expiredStockNameElement.textContent = expiredStockName;
 
-          const actionUrl = `{% url 'admin_delete_stock' 0 %}`.replace('/0/', `/${stockId}/`);
+          const actionUrl = `{% url 'admin_delete_expired_stock' 0 %}`.replace('/0/', `/${expiredStockId}/`);
           deleteForm.setAttribute('action', actionUrl);
       });
   });
 
 
   document.addEventListener('DOMContentLoaded', function () {
-    const addUpdateModal = document.getElementById('adminAddOrUpdateStockModal');
-    const form = document.getElementById('adminAddOrUpdateStockFormModal');
-    const formTitle = document.getElementById('adminAddOrUpdateStockModalTitle');
-    const formSubmitBtn = document.getElementById('adminAddOrUpdateStockSubmitBtnModal');
+    const addUpdateModal = document.getElementById('adminAddOrUpdateExpiredStockModal');
+    const form = document.getElementById('adminAddOrUpdateExpiredStockFormModal');
+    const formTitle = document.getElementById('adminAddOrUpdateExpiredStockModalTitle');
+    const formSubmitBtn = document.getElementById('adminAddOrUpdateExpiredStockSubmitBtnModal');
     
     const selectField = form.querySelector('[name="product"]');
 
@@ -239,41 +258,39 @@
         const dataActionType = button.getAttribute('data-action-type');
         
         if (dataActionType === 'update') {
-            // Populate fields for updating stock
-            const dataStock = button.getAttribute('data-stock');
-            const stock = JSON.parse(dataStock);
+            // Populate fields for updating expired_stock
+            const dataExpiredStock = button.getAttribute('data-expired-stock');
+            const expiredStock = JSON.parse(dataExpiredStock);
 
-            const stockId = stock.id;
-            selectField.value = stock.product;
+            const expiredStockId = expiredStock.id;
+            selectField.value = expiredStock.product;
             selectField.setAttribute('readonly', true);  // Make product field readonly
 
-            form.querySelector('[name="price"]').value = stock.price;
-            form.querySelector('[name="quantity"]').value = stock.quantity;
-            form.querySelector('[name="expiration_date"]').value = stock.expiration_date;
+            form.querySelector('[name="expiration_date"]').value = expiredStock.expiration_date;
+            form.querySelector('[name="quantity"]').value = expiredStock.quantity;
 
-            form.querySelector('[name="stock_action"]').value = 'update';
-            formTitle.textContent = 'Modifier un stock';
-            formSubmitBtn.textContent = 'Modifier ce stock';
+            form.querySelector('[name="expired_stock_action"]').value = 'update';
+            formTitle.textContent = 'Modifier un stock périmé';
+            formSubmitBtn.textContent = 'Modifier ce stock périmé';
 
-            // Set the correct action URL for updating the stock
-            const actionUrl = `{% url 'admin_update_stock' 0 %}`.replace('/0/', `/${stockId}/`);
+            // Set the correct action URL for updating the expired_stock
+            const actionUrl = `{% url 'admin_update_expired_stock' 0 %}`.replace('/0/', `/${expiredStockId}/`);
             form.setAttribute('action', actionUrl);
             
         } else {
-            // Clear fields for creating a new stock entry
+            // Clear fields for creating a new expired_stock entry
             selectField.value = '';
             selectField.removeAttribute('readonly');  // Allow input for product field
 
-            form.querySelector('[name="price"]').value = '';
+            form.querySelector('[name="expiration_date"]').value = getDate();
             form.querySelector('[name="quantity"]').value = '';
-            form.querySelector('[name="expiration_date"]').value = '';
 
-            form.querySelector('[name="stock_action"]').value = 'create';
-            formTitle.textContent = 'Ajouter un stock';
-            formSubmitBtn.textContent = 'Ajouter au stock';
+            form.querySelector('[name="expired_stock_action"]').value = 'create';
+            formTitle.textContent = 'Ajouter un stock périmé';
+            formSubmitBtn.textContent = 'Ajouter au stock périmé';
 
-            // Set the correct action URL for creating a new stock
-            const actionUrl = `{% url 'admin_create_stock' %}`;
+            // Set the correct action URL for creating a new expired_stock
+            const actionUrl = `{% url 'admin_create_expired_stock' %}`;
             form.setAttribute('action', actionUrl);
         }
     });

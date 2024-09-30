@@ -6,7 +6,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Facture #{{ sale.id }}</title>
+    <title>Facture {{ sale.invoice_number }}</title>
     <style>
         /* Apply to the entire body and html */
         html,
@@ -231,7 +231,7 @@
 
         <div class="sub-header">
             <div>
-                <h3>{{ sale_name }} #{{ sale.id }}</h3>
+                <h3>{{ sale_name }} {{ sale.invoice_number }}</h3>
                 <p>Date: <strong>{{ sale.date }}</strong></p>
             </div>
             <!-- <h4>Statut: <strong>{#{ sale.status.name }#}</strong></h4> -->
@@ -291,6 +291,7 @@
                     </td>
                 </tr>
                 {% endif %}
+
                 {% if sale.ttc_amount > sale.ht_amount %}
                 <tr>
                     <td colspan="4">
@@ -320,12 +321,12 @@
                 <tr>
                     <td colspan="4">
                         <div class="amount">
-                            <span class="data-label">
+                            <div class="data-label">
                                 Montant Total:
-                            </span>
-                            <span class="data-value">
+                            </div>
+                            <div class="data-value">
                                 <strong>{{ sale.ttc_amount|floatformat:0|separate_millier }}</strong> {{ price_unit }}
-                            </span>
+                            </div>
                         </div>
                     </td>
                 </tr>
@@ -377,11 +378,15 @@
     </div>
 
     <footer>
-        <p>Merci pour votre confiance à {{ app_site.name }}.</p>
-        <p>{{ app_site.domain }} | {{ app_site.email }} | {{ app_site.phone_number }} {% if app_site.phone_number_other %} | {{ app_site.phone_number_other }} {% endif %}</p>
-        <p>{% if app_site.address %} {{ app_site.address }}{% endif %}</p>
+        <p>Merci pour votre confiance à {{ app_site.name }} ({{ app_site.domain }}).</p>
+        {% if app_site.recip %}<p>{{ app_site.recip }}</p>{% endif %}
+        {% if app_site.info %}<p>{{ app_site.info }}</p>{% endif %}
     </footer>
 
+
+    <!-- <script>
+            window.open("", '_blank');
+    </script> -->
 </body>
 
 </html>

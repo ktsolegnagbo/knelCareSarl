@@ -16,6 +16,11 @@
 	z-index: 9999999999999999999;
 }
 
+.field-required {
+    color: red;
+    font-size: 14px;
+}
+
 
 /* @media only screen and (max-width: 798px) {
 	#flash-template {

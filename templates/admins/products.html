@@ -1,5 +1,6 @@
 {% extends 'app-base.html' %}
 {% load permissions_tags %}
+{% load custom_filters %}
 {% load static %}
 
 {% block title %}KnelCare-Auth{% endblock %}
@@ -68,55 +69,66 @@
               <th colspan="6">Liste des articles</th>
             </tr>
             <tr>
+              <th data-exclude="true" style="color: white;">Actions</th>
               <th data-exclude="true" style="color: white;">Image</th>
               <th style="color: white;">Nom de l'article</th>
               <th style="color: white;">Category</th>
               <th style="color: white;">description</th>
               <th style="color: white;">Prix de vente</th>
               <th style="color: white;">Stock Disponible</th>
+              <th style="color: white;">Quatité Seuil d'Alerte</th>
+              <th style="color: white;">Etat</th>
               <th style="color: white;">Status</th>
-              <th data-exclude="true" style="color: white;">Actions</th>
             </tr>
           </thead>
 
           <tbody class="table-border-bottom-0">
             {% for product in products %} 
               <tr>
+                <td data-exclude="true">
+                  {% if  request.user|can_update_product or request.user|can_delete_product or request.user|can_create_stock %}
+                  <div class="dropdown">
+                    <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                      <i style="font-size: 25px;" class="bx bx-dots-vertical-rounded"></i>
+                    </button>
+                    <div class="dropdown-menu">
+                        {% if  request.user|can_create_stock %}
+                          <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminAddStockModal" data-id="{{ product.id }}">
+                            <b><i class="bx bx-plus me-1"></i> Ajouter un nouveau stock</b>
+                          </button>
+                        {% endif %}
+                        {% if  request.user|can_create_expired_stock %}
+                          <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminAddExpiredStockModal" data-id="{{ product.id }}">
+                            <b><i class="bx bx-plus me-1"></i> Déclarer une quatité périmé</b>
+                          </button>
+                        {% endif %}
+                        {% if  request.user|can_update_product %}
+                        <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminAddOrUpdateProductModal" data-product="{{ product.toMap }}" data-action-type="update">
+                          <b><i class="bx bx-edit-alt me-1"></i> Modifier</b>
+                        </button>
+                        {% endif %}
+                        {% if  request.user|can_delete_product %}
+                          <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminDeleteProductModal" data-id="{{ product.id }}" data-name="{{ product.name }}">
+                            <b><i class="bx bx-trash me-1"></i>  Supprimer</b>
+                          </button>
+                        {% endif %}
+                    </div>
+                  </div>
+                  {% endif %}
+                </td>
                   <td data-exclude="true">
                     <img style="height: 40px; max-width: 90px;" src="{{ product.imageUrl }}" alt="{{ product.name }}">
                   </td>
                   <td><strong>{{ product.name }}</strong></td>
                   <td>{{ product.category }}</td>
                   <td>{{ product.description }}</td>
-                  <td>{{ product.price }}</td>
-                  <td>{{ product.utils.available_stock }}</td>
-                  <td><span class="badge bg-label-{% if product.is_available %}primary{% else %}danger{% endif %} me-1">{{ product.isAvailable }}</span></td>
-                  <td data-exclude="true">
-                    {% if  request.user|can_update_product or request.user|can_delete_product or request.user|can_create_stock %}
-                    <div class="dropdown">
-                      <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
-                        <i style="font-size: 25px;" class="bx bx-dots-vertical-rounded"></i>
-                      </button>
-                      <div class="dropdown-menu">
-                          {% if  request.user|can_create_stock %}
-                            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminAddStockModal" data-id="{{ product.id }}">
-                              <b><i class="bx bx-plus me-1"></i> Ajouter un nouveau stock</b>
-                            </button>
-                          {% endif %}
-                          {% if  request.user|can_update_product %}
-                          <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminAddOrUpdateProductModal" data-product="{{ product.toMap }}" data-action-type="update">
-                            <b><i class="bx bx-edit-alt me-1"></i> Modifier</b>
-                          </button>
-                          {% endif %}
-                          {% if  request.user|can_delete_product %}
-                            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adminDeleteProductModal" data-id="{{ product.id }}" data-name="{{ product.name }}">
-                              <b><i class="bx bx-trash me-1"></i>  Supprimer</b>
-                            </button>
-                          {% endif %}
-                      </div>
-                    </div>
-                    {% endif %}
-                  </td>
+                  <td>{{ product.price|floatformat:0  }}</td>
+                  <!-- color: rgb(113, 112, 112)!important; -->
+                  <td><span style="font-size: 14px;" class="{% if product.stock_available.quantity < 0 %}badge bg-label-danger{% endif %}">{{ product.stock_available.quantity }}</span></td>
+                  <td>{{ product.alert_threshold }}</td>
+                  <td><span class="badge bg-label-{{ product.stock_available.class }} me-1">{{ product.stock_available.status }}</span></td>
+                  <td><span class="badge bg-label-{% if product.isAvailable.ok %}primary{% else %}danger{% endif %} me-1">{{ product.isAvailable.status }}</span></td>
+                  
               </tr>
             {% endfor %}
           </tbody>
@@ -134,39 +146,73 @@
 
 
 {% block modalsBlock %}
-     <div class="modal fade" id="adminAddStockModal" data-bs-backdrop="static" tabindex="-1">
-       <div class="modal-dialog">
-          <form  id="adminAddStockFormModal" method="POST" action="{% url 'admin_create_stock' %}" class="form modal-content" enctype="multipart/form-data">
+  <div class="modal fade" id="adminAddExpiredStockModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog">
+      <form  id="adminAddExpiredStockFormModal" method="POST" action="{% url 'admin_create_expired_stock' %}" class="form modal-content" enctype="multipart/form-data">
 
-           <div class="modal-header">
-             <h5 class="modal-title">Ajouter un stock</h5>
-             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-           </div>
+        <div class="modal-header">
+          <h5 class="modal-title">Déclarer un stock périmé</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
 
-           <div class="modal-body">
-              {% csrf_token %} 
-              <input type="hidden" name="stock_action" value="create">
-              <input type="hidden" name="redirect_url" value="{{ request.path }}" />
-              
-              {% for field in stock_form %} 
-                  <div class="mb-3">
-                     {{ field | as_crispy_field }} 
-                     {% if field.errors %}
-                        <!-- <div class="error">{#{ field.errors.0 }#}</div> -->
-                        <div class="text-danger">{{ field.errors }}</div>
-                     {% endif %}
-                  </div>
-              {% endfor %}
-            </div>
+        <div class="modal-body">
+          {% csrf_token %} 
+          <input type="hidden" name="expired_stock_action" value="create">
+          <input type="hidden" name="redirect_url" value="{{ request.path }}" />
+          
+          {% for field in expired_stock_form %} 
+              <div class="mb-3">
+                  {{ field | as_crispy_field }} 
+                  {% if field.errors %}
+                    <!-- <div class="error">{#{ field.errors.0 }#}</div> -->
+                    <div class="text-danger">{{ field.errors }}</div>
+                  {% endif %}
+              </div>
+          {% endfor %}
+        </div>
 
-            <div class="modal-footer">
-             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
-             <button type="submit" class="btn btn-primary">Ajouter le stock</button>
-           </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary">Déclarer ce stock périmé</button>
+        </div>
 
-         </form>
-       </div>
-     </div>
+      </form>
+    </div>
+  </div>
+
+    <div class="modal fade" id="adminAddStockModal" data-bs-backdrop="static" tabindex="-1">
+      <div class="modal-dialog">
+        <form  id="adminAddStockFormModal" method="POST" action="{% url 'admin_create_stock' %}" class="form modal-content" enctype="multipart/form-data">
+
+          <div class="modal-header">
+            <h5 class="modal-title">Ajouter un stock</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+
+          <div class="modal-body">
+            {% csrf_token %} 
+            <input type="hidden" name="stock_action" value="create">
+            <input type="hidden" name="redirect_url" value="{{ request.path }}" />
+            
+            {% for field in stock_form %} 
+                <div class="mb-3">
+                    {{ field | as_crispy_field }} 
+                    {% if field.errors %}
+                      <!-- <div class="error">{#{ field.errors.0 }#}</div> -->
+                      <div class="text-danger">{{ field.errors }}</div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-primary">Ajouter le stock</button>
+          </div>
+
+        </form>
+      </div>
+    </div>
 
      <div class="modal fade" id="adminAddOrUpdateProductModal" data-bs-backdrop="static" tabindex="-1">
        <div class="modal-dialog">
@@ -206,7 +252,7 @@
             <div class="modal-footer">
              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
              
-             <button type="submit" class="btn btn-primary">Ajouter l'article</button>
+             <button type="submit" class="btn btn-primary" id="adminAddOrUpdateProductBtnModal">Ajouter l'article</button>
            </div>
 
          </form>
@@ -275,7 +321,7 @@
       const addUpdateModal = document.getElementById('adminAddOrUpdateProductModal');
       const form = document.getElementById('adminAddOrUpdateProductFormModal');
       const formTitle = document.getElementById('adminAddOrUpdateProductModalTitle');
-      
+      const formSubmitBtn = document.getElementById('adminAddOrUpdateProductBtnModal');
 
       addUpdateModal.addEventListener('show.bs.modal', function (event) {
         const button = event.relatedTarget; // Button that triggered the modal
@@ -291,6 +337,7 @@
           form.querySelector('[name="name"]').value = product.name;
           form.querySelector('[name="description"]').value = product.description;
           form.querySelector('[name="price"]').value = product.price;
+          form.querySelector('[name="alert_threshold"]').value = product.alert_threshold;
           form.querySelector('[name="is_available"]').checked = product.is_available == true;
           form.querySelector('[name="image_url"]').value = product.image_url;
           form.querySelector('[name="image"]').src = product.image;
@@ -311,6 +358,7 @@
 
           form.querySelector('[name="product_action"]').value = 'update';
           formTitle.textContent = 'Modifier un article'
+          formSubmitBtn.textContent = 'Modifier l\'article'
           const actionUrl = `{% url 'admin_update_product' 0 %}`.replace('/0/', `/${productId}/`);
           form.setAttribute('action', actionUrl);
           
@@ -319,6 +367,7 @@
           form.querySelector('[name="name"]').value = '';
           form.querySelector('[name="description"]').value = '';
           form.querySelector('[name="price"]').value = '';
+          form.querySelector('[name="alert_threshold"]').value = '';
           form.querySelector('[name="is_available"]').checked = false;
           form.querySelector('[name="image_url"]').value = '';
           form.querySelector('[name="image"]').src = '';
@@ -329,12 +378,12 @@
 
           form.querySelector('[name="product_action"]').value = 'create';
           formTitle.textContent = 'Ajouter un article'
+          formSubmitBtn.textContent = 'Ajouter l\'article'
           const actionUrl = `{% url 'admin_create_product' %}`;
           form.setAttribute('action', actionUrl);
         }
       });
   });
-
 
   document.addEventListener('DOMContentLoaded', function () {
       const addStockModal = document.getElementById('adminAddStockModal');
@@ -357,6 +406,27 @@
       });
   });
 
+  document.addEventListener('DOMContentLoaded', function () {
+      const addExpiredStockModal = document.getElementById('adminAddExpiredStockModal');
+      const form = document.getElementById('adminAddExpiredStockFormModal');
 
+      addExpiredStockModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget; // Button that triggered the modal
+
+        const productId = button.getAttribute('data-id');
+
+          const selectField = form.querySelector('[name="product"]');
+          selectField.value = productId;
+          selectField.setAttribute('readonly', true);
+            
+          selectField.addEventListener('mousedown', function(e) {
+              e.preventDefault();
+          });
+          form.querySelector('[name="quantity"]').value = '';
+          form.querySelector('[name="expiration_date"]').value = '';
+      });
+  });
+  
+  
 </script>
 {% endblock %}

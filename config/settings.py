@@ -47,7 +47,12 @@ if not SECRET_KEY:
 # DEBUG = os.getenv("DEBUG", 'True').lower() in ['true', 'yes', '1']
 DEBUG = os.getenv('PRODUCTION', 'False') == 'False'
 
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]
+# ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", 'sale.knelcare.com', 'www.sale.knelcare.com', '31.207.37.253']
+
+ALLOWED_HOSTS = [ '127.0.0.1', '31.207.37.253', 'sales.knelcare.com', 'www.sales.knelcare.com', 'vps106379.serveur-vps.net', 'www.vps106379.serveur-vps.net']
+
+CSRF_TRUSTED_ORIGINS = ['https://31.207.37.253', 'https://sales.knelcare.com', 'https://www.sales.knelcare.com', 'https://vps106379.serveur-vps.net', 'https://www.vps106379.serveur-vps.net' ]
+
 
 # Current DJANGO_ENVIRONMENT
 ENVIRONMENT = os.getenv("DJANGO_ENVIRONMENT", default="local")
@@ -170,19 +175,19 @@ else:
             'NAME': os.getenv('DB_NAME'),
             'USER': os.getenv('DB_USER'),
             'PASSWORD': os.getenv('DB_PASSWORD'),
-            'HOST': os.getenv('DB_HOST'),
-            'PORT': os.getenv('DB_PORT'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
         }
     }
 
     # DATABASES = {
     #     'default': {
     #         'ENGINE': 'django.db.backends.mysql',
-    #         'NAME': 'kenkou_app',  # Name of the MySQL database you created
-    #         'USER': 'kossi',       # MySQL user you created
-    #         'PASSWORD': 'kossi@123',  # Password for the MySQL user
-    #         'HOST': 'localhost',    # Set to 'localhost' or your MySQL server's IP address
-    #         'PORT': '3306',         # Default port for MySQL
+    #         'NAME': os.getenv('DB_NAME'),  # Name of the MySQL database you created
+    #         'USER': os.getenv('DB_USER'),       # MySQL user you created
+    #         'PASSWORD': os.getenv('DB_PASSWORD'),  # Password for the MySQL user
+    #         'HOST': os.getenv('DB_HOST', 'localhost'),    # Set to 'localhost' or your MySQL server's IP address
+    #         'PORT': os.getenv('DB_PORT', '3306'),         # Default port for MySQL
     #         'OPTIONS': {
     #             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",  # Recommended for better data integrity
     #         },

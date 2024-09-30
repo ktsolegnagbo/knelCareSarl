@@ -68,37 +68,24 @@
                 <th colspan="9">Liste des utilisateurs</th>
               </tr>
               <tr>
+                <th data-exclude="true" style="color: white;">Actions</th>
                 <th data-exclude="true" style="color: white;">Image</th>
                 <th style="color: white;">Nom & prénoms</th>
                 <th style="color: white;">Nom utilisateur</th>
                 <th style="color: white;">email</th>
                 <th style="color: white;">Téléphone</th>
-                <th style="color: white;">Salaire de base</th>
-                <th style="color: white;">Numero de téléphone</th>
+                <th style="color: white;">Salaire brut</th>
+                <th style="color: white;">Position</th>
                 <th style="color: white;">Date de naissance</th>
-                <!-- <th style="color: white;">Roles</th> -->
+                <th style="color: white;">Roles</th>
                 <th style="color: white;">Status</th>
-                <th data-exclude="true" style="color: white;">Actions</th>
               </tr>
             </thead>
             
             <tbody class="table-border-bottom-0">
               {% for employee in employees %} 
                 <tr>
-                    <td data-exclude="true">
-                      <img style="height: 30px; max-width: 100px;" src="/static/{{ employee.imageUrl }}" alt="{{ employee.full_name }}">
-                    </td>
-                    <td>{% if employee.full_name  %}{{ employee.full_name }}{% endif %}</td>
-                    <td>{% if employee.user.username %}<strong>{{ employee.user.username }}</strong>{% endif %}</td>
-                    <td>{% if employee.user.email %}{{ employee.user.email }}{% endif %}</td>
-                    <td>{% if employee.phone_number %}{{ employee.phone_number }}{% endif %}</td>
-                    <td>{% if employee.salary_base %}{{ employee.salary_base }}{% endif %}</td>
-                    <td>{% if employee.phone_number %}{{ employee.phone_number }}{% endif %}</td>
-                    <td>{% if employee.birth_date %}{{ employee.birth_date }}{% endif %}</td>
-                    <td>{% if employee.roles %}{{ employee.list_roles_name }}{% endif %}</td>
-                    <td><span class="badge bg-label-{% if employee.user.is_active %}primary{% else %}danger{% endif %} me-1">{% if employee.user.is_active %}Active{% else %}Inactive{% endif %}</span></td>
-
-                    <td data-exclude="true">
+                  <td data-exclude="true">
                       {% if  request.user|can_update_employee or request.user|can_delete_employee or request.user|can_give_permission or request.user|can_make_payroll %}
                         <div class="dropdown">
                           <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
@@ -129,9 +116,24 @@
                         </div>
                       {% endif %}
                     </td>
+                    <td data-exclude="true">
+                      <img style="height: 30px; max-width: 100px;" src="/static/{{ employee.imageUrl }}" alt="{{ employee.full_name }}">
+                    </td>
+                    <td>{% if employee.full_name  %}{{ employee.full_name }}{% endif %}</td>
+                    <td>{% if employee.user.username %}<strong>{{ employee.user.username }}</strong>{% endif %}</td>
+                    <td>{% if employee.user.email %}{{ employee.user.email }}{% endif %}</td>
+                    <td>{% if employee.phone_number %}{{ employee.phone_number }}{% endif %}</td>
+                    <td>{% if employee.salary_brut %}{{ employee.salary_brut }}{% endif %}</td>
+                    <td>{% if employee.position %}{{ employee.position }}{% endif %}</td>
+                    <td>{% if employee.birth_date %}{{ employee.birth_date }}{% endif %}</td>
+                    <td>{% if employee.roles %}{{ employee.list_roles_name }}{% endif %}</td>
+                    <td><span class="badge bg-label-{% if employee.user.is_active %}primary{% else %}danger{% endif %} me-1">{% if employee.user.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+
+                    
                 </tr>
               {% endfor %}
             </tbody>
+            
           {% else %}
             <tr data-exclude="true">
                 <th data-exclude="true" colspan="14" style="color:brown; font-weight: bold;">Pas de données disponible</th>
@@ -195,10 +197,34 @@
                 </div>
 
                 <div class="mb-3">
-                  <label class="form-label" for="employee-base-salary">Salaire de base <b class="field-required">*</b></label>
+                  <label class="form-label" for="employee-salary-brut">Salaire brute <b class="field-required">*</b></label>
                   <div class="input-group input-group-merge">
                     <span class="input-group-text"><i class="bx bx-money"></i></span>
-                    <input id="employee-base-salary" name="employee_base_salary" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="1" placeholder="Saisir Le Salaire de base" class="form-control" />
+                    <input required="required" id="employee-salary-brut" name="employee_salary_brut" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="0" placeholder="Saisir Le Salaire brut" class="form-control" />
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label" for="employee-salary-cnss">CNSS <b class="field-required">*</b></label>
+                  <div class="input-group input-group-merge">
+                    <span class="input-group-text"><i class="bx bx-money"></i></span>
+                    <input required="required" id="employee-salary-cnss" name="employee_cnss" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="0" placeholder="Saisir La CNSS" class="form-control" />
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label" for="employee-salary-irpp">IRPP <b class="field-required">*</b></label>
+                  <div class="input-group input-group-merge">
+                    <span class="input-group-text"><i class="bx bx-money"></i></span>
+                    <input required="required" id="employee-salary-irpp" name="employee_irpp" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="0" placeholder="Saisir L'IRPP'" class="form-control" />
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label" for="employee-salary-other-deductions">Autres retenus <b class="field-required">*</b></label>
+                  <div class="input-group input-group-merge">
+                    <span class="input-group-text"><i class="bx bx-money"></i></span>
+                    <input required="required" id="employee-salary-other-deductions" name="employee_other_deductions" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="0" placeholder="Saisir Autres retenus" class="form-control" />
                   </div>
                 </div>
 
@@ -206,11 +232,11 @@
                   <label class="form-label" for="employee-commission">Commission sur vente <b class="field-required">*</b></label>
                   <div class="input-group input-group-merge">
                     <span class="input-group-text"><i class="bx bx-money"></i></span>
-                    <input id="employee-commission" name="employee_commission" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="1" placeholder="Saisir La Commission Sur Vente" class="form-control" />
+                    <input required="required" id="employee-commission" name="employee_commission" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="0" placeholder="Saisir La Commission Sur Vente" class="form-control" />
                   </div>
                 </div>
-
               </div>
+
               <div class="modal-footer">
                   <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
                   <button type="submit" class="btn btn-danger">Oui, supprimer</button>
@@ -414,7 +440,8 @@
           // addOrUpdateUserForm.querySelector('[name="location"]').value = user.location;
           // addOrUpdateUserForm.querySelector('[name="birth_date"]').value = user.birth_date;
           
-          addOrUpdateUserForm.querySelector('[name="salary_base"]').value = user.salary_base;
+          addOrUpdateUserForm.querySelector('[name="salary_brut"]').value = user.salary_brut;
+          addOrUpdateUserForm.querySelector('[name="position"]').value = user.position;
           
           addOrUpdateUserForm.querySelector('[name="is_active"]').checked = user.is_active == true;
           // addOrUpdateUserForm.querySelector('[name="agree_privacy_policy"]').checked = user.agree_privacy_policy == true;
@@ -451,15 +478,15 @@
 
           // addOrUpdateUserForm.querySelector('[name="country"]').value = '';
           addOrUpdateUserForm.querySelector('[name="roles"]').value = [];
-          
           addOrUpdateUserForm.querySelector('[name="phone_number"]').value = '';
           
           // addOrUpdateUserForm.querySelector('[name="biography"]').value = '';
           // addOrUpdateUserForm.querySelector('[name="location"]').value = '';
           // addOrUpdateUserForm.querySelector('[name="birth_date"]').value = '';
           
-          addOrUpdateUserForm.querySelector('[name="salary_base"]').value = '';
-          
+          addOrUpdateUserForm.querySelector('[name="salary_brut"]').value = '';
+          addOrUpdateUserForm.querySelector('[name="position"]').value = '';
+
           addOrUpdateUserForm.querySelector('[name="is_active"]').checked = false;
           // addOrUpdateUserForm.querySelector('[name="agree_privacy_policy"]').checked = false;
           // addOrUpdateUserForm.querySelector('[name="employee_pic"]').src = '';
@@ -491,7 +518,11 @@
 
       makeEmployeePaymentFullName.textContent = user.full_name ?? user.userName;
       // makeEmployeePaymentFormModal.querySelector('[name="employee_salary_date"]').value = '';
-      makeEmployeePaymentFormModal.querySelector('[name="employee_base_salary"]').value = user.salary_base;
+      makeEmployeePaymentFormModal.querySelector('[name="employee_salary_brut"]').value = parseFloat(user.salary_brut ?? '0');
+      makeEmployeePaymentFormModal.querySelector('[name="employee_cnss"]').value = parseFloat(user.cnss ?? '0');
+      makeEmployeePaymentFormModal.querySelector('[name="employee_irpp"]').value = parseFloat(user.irpp ?? '0');
+      makeEmployeePaymentFormModal.querySelector('[name="employee_other_deductions"]').value = parseFloat(user.other_deductions ?? '0');
+
       makeEmployeePaymentFormModal.querySelector('[name="employee_commission"]').value = 0;
 
       const actionUrl = `{% url 'admin_employee_salary_payment' 0 %}`.replace('/0/', `/${userId}/`);
@@ -542,9 +573,6 @@
       userPermissionFormModal.setAttribute('action', actionUrl);
     }
   });
-
-      
-      
   
   });
 </script>

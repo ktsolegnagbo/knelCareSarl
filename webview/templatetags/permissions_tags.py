@@ -343,3 +343,27 @@ def can_view_stock(user):
     if isinstance(user, User):
         return user.has_perm(f'{webview}.view_stock')
     return False
+
+@register.filter
+def can_create_expired_stock(user):
+    if isinstance(user, User):
+        return user.has_perm(f'{webview}.add_expired_stock')
+    return False
+
+@register.filter
+def can_update_expired_stock(user):
+    if isinstance(user, User):
+        return user.has_perm(f'{webview}.change_expired_stock')
+    return False
+
+@register.filter
+def can_delete_expired_stock(user):
+    if isinstance(user, User):
+        return user.has_perm(f'{webview}.delete_expired_stock')
+    return False
+
+@register.filter
+def can_view_expired_stock(user):
+    if isinstance(user, User):
+        return user.has_perm(f'{webview}.view_expired_stock')
+    return False

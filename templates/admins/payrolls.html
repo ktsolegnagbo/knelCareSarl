@@ -70,23 +70,21 @@
             </tr>
 
             <tr>
+              <th data-exclude="true" style="color: white;">Actions</th>
               <th style="color: white;">Nom Employé</th>
               <th style="color: white;">Date du paiement</th>
-              <th style="color: white;">Salaire de base ( {{ price_unit }} )</th>
+              <th style="color: white;">Salaire brut ( {{ price_unit }} )</th>
+              <th style="color: white;">CNSS ( {{ price_unit }} )</th>
+              <th style="color: white;">IRPP ( {{ price_unit }} )</th>
+              <th style="color: white;">Autres Retenues ( {{ price_unit }} )</th>
               <th style="color: white;">Commission ( {{ price_unit }} )</th>
-              <th style="color: white;">Total Payé ( {{ price_unit }} )</th>
-              <th data-exclude="true" style="color: white;">Actions</th>
+              <th style="color: white;">Total Net Payé ( {{ price_unit }} )</th>
             </tr>
           </thead>
 
           <tbody class="table-border-bottom-0">
             {% for payroll in payrolls %} 
               <tr>
-                <td><strong>{{ payroll.employee.full_name }}</strong></td>
-                <td>{{ payroll.date }}</td>
-                <td>{{ payroll.salary_base }}</td>
-                <td>{{ payroll.commission }}</td>
-                <td>{{ payroll.total_salary }}</td>
                 <td data-exclude="true">
                   {% if  request.user|can_update_payroll or request.user|can_delete_payroll %}
                   <div class="dropdown">
@@ -109,6 +107,15 @@
                   </div>
                   {% endif %}
                 </td>
+                <td><strong>{{ payroll.employee.full_name }}</strong></td>
+                <td>{{ payroll.date }}</td>
+                <td>{{ payroll.salary_brut }}</td>
+                <td>{{ payroll.cnss }}</td>
+                <td>{{ payroll.irpp }}</td>
+                <td>{{ payroll.other_deductions }}</td>
+                <td>{{ payroll.commission }}</td>
+                <td>{{ payroll.salary_net }}</td>
+                
               </tr>
             {% endfor %}
           </tbody>
@@ -140,10 +147,11 @@
               <input type="hidden" name="payroll_action" value="">
 
               <div class="mb-3">
+                <label for="employee" class="form-label">Choisir l'employée à payer <b class="field-required"> *</b></label>
                 <select style="font-weight: bold;" name="employee" id="employee" class="form-select">
-                  <!-- <option value=""></option> -->
+                  <option value="">-----Selectionner l'employée-----</option>
                   {% for employee in employees %}
-                      <option value="{{ employee.id }}">{{ employee.full_name }}</option>
+                      <option data-val="{{ employee.toMap }}" value="{{ employee.id }}">{{ employee.full_name }}</option>
                   {% endfor %}
                 </select>
               </div>
@@ -157,10 +165,34 @@
               </div>
 
               <div class="mb-3">
-                <label class="form-label" for="employee-base-salary">Salaire de base <b class="field-required">*</b></label>
+                <label class="form-label" for="employee-salary-brut">Salaire brut <b class="field-required">*</b></label>
                 <div class="input-group input-group-merge">
                   <span class="input-group-text"><i class="bx bx-money"></i></span>
-                  <input id="employee-base-salary" name="salary_base" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="1" placeholder="Saisir Le Salaire de base" class="form-control" />
+                  <input required="required" id="employee-salary-brut" name="salary_brut" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="0" placeholder="Saisir Le Salaire Brut" class="form-control" />
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label" for="employee-salary-cnss">CNSS <b class="field-required">*</b></label>
+                <div class="input-group input-group-merge">
+                  <span class="input-group-text"><i class="bx bx-money"></i></span>
+                  <input required="required" id="employee-salary-cnss" name="salary_cnss" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="0" placeholder="Saisir CNSS" class="form-control" />
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label" for="employee-salary-irpp">IRPP <b class="field-required">*</b></label>
+                <div class="input-group input-group-merge">
+                  <span class="input-group-text"><i class="bx bx-money"></i></span>
+                  <input required="required" id="employee-salary-irpp" name="salary_irpp" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="0" placeholder="Saisir IRPP" class="form-control" />
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label" for="employee-salary-other-deductions">Autres Retenues <b class="field-required">*</b></label>
+                <div class="input-group input-group-merge">
+                  <span class="input-group-text"><i class="bx bx-money"></i></span>
+                  <input required="required" id="employee-salary-other-deductions" name="salary_other_deductions" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="0" placeholder="Saisir Autres revenues" class="form-control" />
                 </div>
               </div>
 
@@ -168,7 +200,7 @@
                 <label class="form-label" for="employee-commission">Commission sur vente <b class="field-required">*</b></label>
                 <div class="input-group input-group-merge">
                   <span class="input-group-text"><i class="bx bx-money"></i></span>
-                  <input id="employee-commission" name="salary_commission" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="1" placeholder="Saisir La Commission Sur Vente" class="form-control" />
+                  <input required="required" id="employee-commission" name="salary_commission" type="number" inputmode="numeric" pattern="[0-9]*" value="" min="0" placeholder="Saisir La Commission Sur Vente" class="form-control" />
                 </div>
               </div>
 
@@ -250,6 +282,17 @@
           }
       });
 
+      selectField.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const dataValue = selectedOption.getAttribute('data-val');
+        if (dataValue && dataValue!='' && dataValue!=' ' && dataValue!=null && dataValue!='null') {
+          const dataVal = JSON.parse(dataValue);
+          form.querySelector('[name="salary_brut"]').value = parseFloat(dataVal.salary_brut);
+        } else {
+          form.querySelector('[name="salary_brut"]').value = '';
+        }
+      });
+
       addUpdateModal.addEventListener('show.bs.modal', function (event) {
           const button = event.relatedTarget; // Button that triggered the modal
           const dataActionType = button.getAttribute('data-action-type');
@@ -265,7 +308,10 @@
               selectField.style.background = '#ddd'
 
               form.querySelector('[name="salary_date"]').value = payroll.date;
-              form.querySelector('[name="salary_base"]').value = payroll.salary_base;
+              form.querySelector('[name="salary_brut"]').value = parseFloat(payroll.salary_brut);
+              form.querySelector('[name="salary_cnss"]').value = parseFloat(payroll.cnss);
+              form.querySelector('[name="salary_irpp"]').value = parseFloat(payroll.irpp);
+              form.querySelector('[name="salary_other_deductions"]').value = parseFloat(payroll.other_deductions);
               form.querySelector('[name="salary_commission"]').value = payroll.commission;
 
               form.querySelector('[name="payroll_action"]').value = 'update';
@@ -283,11 +329,14 @@
               selectField.style.background = 'white'
 
               form.querySelector('[name="salary_date"]').value = getDate();
-              form.querySelector('[name="salary_base"]').value = '';
+              form.querySelector('[name="salary_brut"]').value = '';
+              form.querySelector('[name="salary_cnss"]').value = 0;
+              form.querySelector('[name="salary_irpp"]').value = 0;
+              form.querySelector('[name="salary_other_deductions"]').value = 0;
               form.querySelector('[name="salary_commission"]').value = 0;
 
               form.querySelector('[name="payroll_action"]').value = 'create';
-              formTitle.textContent = 'Paiement de salaire un payroll';
+              formTitle.textContent = 'Paiement de salaire';
               formSubmitBtn.textContent = 'Ajouter le paiement';
 
               // Set the correct action URL for creating a new payroll

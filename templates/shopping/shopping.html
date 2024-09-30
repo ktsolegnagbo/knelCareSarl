@@ -30,18 +30,40 @@
 
                <div class="row">
                   <div class="col-md-6 mb-3">
-                     <strong>Faire une remise:</strong>
+                     <!-- <strong>Faire une remise:</strong> -->
                      <form id="discount-price-form" style="margin-bottom: 3px;" class="form update-form" method="POST" action="">
                         {% csrf_token %}
-                        <div class="form-group" style="width: 250px;">
-                           <div class="input-group input-group-merge">
-                              <input style="text-align: center; font-size: 16px; "
-                                 class="discount-input form-control form-control-sm qty_input" type="text" inputmode="numeric"
-                                 pattern="[0-9]*" name="discount" value="{{ discount|floatformat:0|separate_millier }}"
-                                 data-amount="{{ discount|floatformat:0|separate_millier }}" min="0" id="discount-price" />
+                        <div class="mb-2">
 
-                              <span style="padding-left: 0px;padding-right: 5px;" id="basic-icon-default-company2"
-                                 class="discount-input-price-unit input-group-text">{{ price_unit }}</span>
+                           <div class="form-check">
+                              <input type="radio" value="percent" name="discount_type" id="discount-type-percent" class="option-radio form-check-input">
+                              <label class="form-check-label" for="discount-type-percent">Remise En Pourcentage (> 1% à 100%)</label>
+                           </div>
+
+                           <div class="form-check">
+                              <input type="radio" value="percent_small" name="discount_type" id="discount-type-percent-small" class="option-radio form-check-input">
+                              <label class="form-check-label" for="discount-type-percent-small">Remise En Pourcentage (> 0% à 1%)</label>
+                           </div>
+
+                           <div class="form-check">
+                              <input type="radio" value="amount" name="discount_type" id="discount-type-amount" class="option-radio form-check-input">
+                              <label class="form-check-label" for="discount-type-amount">Remise En Montant</label>
+                           </div>
+                        </div>
+
+                        <div class="form-group" style="width: 250px;">
+                              
+                           <div class="input-group input-group-merge">
+
+                              <input style="text-align: center; font-size: 16px;"
+                                 class="discount-input form-control form-control-sm qty_input" type="text" inputmode="numeric"
+                                 pattern="[0-9]*" name="discount" required="required" value="" id="discount-price" />
+                                 <!-- data-amount="{% if discount_type == 'percent' or discount_type == 'percent_small' %}{{ discount|floatformat:0 }}{% else %}{{ discount|floatformat:0|separate_millier }}{% endif %}"  -->
+                                 <!-- min="0" max="{% if discount_type == 'percent' %}1{% endif %}"  -->
+
+                              <span style="padding-left: 0px; padding-right: 5px; width: 41px; text-align: center!important;" 
+                                    id="basic-icon-default-company2"
+                                    class="discount-input-price-unit input-group-text"></span>
 
                               <button style="border: 1px solid red!important; font-size: 16px; visibility: hidden;"
                                  class="discount-price text-danger btn btn-sm" id="discount-price-btn">
@@ -54,7 +76,7 @@
 
                   <div class="col-md-6 mb-3">
                      <h6 class="mb-2">Montant HT: <strong>{{ totalHT|floatformat:0|separate_millier }}</strong> {{ price_unit }}</h6>
-                     <h6 class="mb-2">Remise: <strong>{{ discount|floatformat:0|separate_millier }}</strong> {{ price_unit }}</h6>
+                     <h6 class="mb-2">Remise: <strong>{{ discount|floatformat:0|separate_millier }}</strong> {% if discount_type == 'percent' or discount_type == 'percent_small' %}%{% else %}{{ price_unit }}{% endif %}</h6>
                      <h6 class="mb-2">Total HT à payer: <strong>{{ totalGlobalHT|floatformat:0|separate_millier }}</strong> {{ price_unit }}</h6>
                   </div>
                </div>
@@ -377,7 +399,119 @@
 {% endblock %}
 {% block postloadjs %}
 {{ block.super }}
+
+
 <script>
+
+   function appyDiscountStyle(){
+      $(`.discount-price`).css('visibility', 'visible');
+      $(`.discount-input`).css('border-top', '1px solid red');
+      $(`.discount-input`).css('border-bottom', '1px solid red');
+      $(`.discount-input`).css('border-left', '1px solid red');
+      $(`.discount-input-price-unit`).css('border-top', '1px solid red');
+      $(`.discount-input-price-unit`).css('border-bottom', '1px solid red');
+
+      // var currentAmount = parseInt(`${$(this).attr("data-amount")}`);
+      // var changedAmount = parseInt(`${$(this).val()}`);
+      // if (currentAmount == changedAmount) {
+      //    $(`.discount-price`).css('visibility', 'hidden');
+      // } else {
+      //    $(`.discount-price`).css('visibility', 'visible');
+      //    $(`.discount-input`).css('border-top', '1px solid red');
+      //    $(`.discount-input`).css('border-bottom', '1px solid red');
+      //    $(`.discount-input`).css('border-left', '1px solid red');
+      //    $(`.discount-input-price-unit`).css('border-top', '1px solid red');
+      //    $(`.discount-input-price-unit`).css('border-bottom', '1px solid red');
+      // }
+   }
+
+   function initRadio(init=false,radio_value='amount'){
+      const checkedRadio = document.querySelector('.option-radio');
+      const discountPrice = document.getElementById('discount-price');
+      const basicSpan = document.getElementById('basic-icon-default-company2');
+      if (init==true) {
+         radio_value = "{{ discount_type }}";
+         const radioButtons = document.querySelectorAll('.option-radio');
+         radioButtons.forEach(radio => {
+            if (radio.value === radio_value) {
+                  radio.checked = true;
+            }
+         });
+      }
+
+      if (radio_value == 'percent' || radio_value == 'percent_small') {
+         discountPrice.value = '{{ discount }}';
+         basicSpan.innerHTML = '<b style="margin-left: 10px;">%</b>';
+      } else {
+         discountPrice.value = '{{ discount|floatformat:0|separate_millier }}';
+         basicSpan.innerHTML = '{{ price_unit }}';
+      }
+      
+   }
+
+   function loadClientDetails(clientId) {
+      const fetchUrl = "{% url 'admin_clients_details' 0 %}".replace('/0/', `/${clientId}/`);
+      fetch(fetchUrl)
+         .then(response => response.json())
+         .then(data => {
+            updateFields(data.form, clientId)
+         })
+         .catch(error => {
+            console.error('Error:', error);
+         });
+   }
+
+   function updateFields(data = {}, clientId){
+      var createUpdateUserBlock = document.getElementById('create-update-user-block');
+      var createUpdateUserLabel = document.getElementById('create-update-user-label');
+
+      if (clientId && clientId != 'new_client' && clientId!='') {
+         createUpdateUserBlock.style.display = 'block';
+         createUpdateUserLabel.textContent = 'Modifier les informations du client'
+      } else if(clientId == 'new_client') {
+         createUpdateUserBlock.style.display = 'block';
+         createUpdateUserLabel.textContent = 'Créer ce nouveau client'
+      } else {
+         createUpdateUserBlock.style.display = 'none';
+         createUpdateUserLabel.textContent = 'Créer ce nouveau client'
+      }
+
+
+      data = data??{};
+      const form = document.getElementById('clientForm');
+      form.querySelector('[name="client_first_name"]').value = data.first_name??'';
+      form.querySelector('[name="client_last_name"]').value = data.last_name??'';
+      form.querySelector('[name="client_company"]').value = data.company??'';
+      form.querySelector('[name="client_email"]').value = data.email??'';
+      form.querySelector('[name="client_phone_number"]').value = data.phone_number??'';
+      form.querySelector('[name="client_phone_number_other"]').value = data.phone_number_other??'';
+      form.querySelector('[name="client_country"]').value = data.country??'';
+      form.querySelector('[name="client_city"]').value = data.city??'';
+      form.querySelector('[name="client_address"]').value = data.address??'';
+   }
+
+   function getDateTime(){
+      var now = new Date();
+      var year = now.getFullYear();
+      var month = ("0" + (now.getMonth() + 1)).slice(-2); // Add leading zero
+      var day = ("0" + now.getDate()).slice(-2); // Add leading zero
+      var hours = ("0" + now.getHours()).slice(-2); // Add leading zero
+      var minutes = ("0" + now.getMinutes()).slice(-2); // Add leading zero
+      var datetimeValue = year + "-" + month + "-" + day + "T" + hours + ":" + minutes;
+      // Set the datetime input value
+      return datetimeValue;
+   }
+
+   initRadio(true);
+   
+   const radioButtons = document.querySelectorAll('.option-radio');
+   radioButtons.forEach(radio => {
+      radio.addEventListener('change', function() {
+         initRadio(false, this.value);
+         appyDiscountStyle();
+      });
+   });
+
    $('.btt-link').click(function (e) {
       window.scrollTo(0, 0)
    })
@@ -397,19 +531,7 @@
 
    // Update discount on change
    $(".discount-input").change(function (e) {
-      var currentAmount = parseInt(`${$(this).attr("data-amount")}`);
-      var changedAmount = parseInt(`${$(this).val()}`);
-      if (currentAmount == changedAmount) {
-         $(`.discount-price`).css('visibility', 'hidden');
-         border: ;
-      } else {
-         $(`.discount-price`).css('visibility', 'visible');
-         $(`.discount-input`).css('border-top', '1px solid red');
-         $(`.discount-input`).css('border-bottom', '1px solid red');
-         $(`.discount-input`).css('border-left', '1px solid red');
-         $(`.discount-input-price-unit`).css('border-top', '1px solid red');
-         $(`.discount-input-price-unit`).css('border-bottom', '1px solid red');
-      }
+      appyDiscountStyle();
    });
 
    // Remove item and reload on click
@@ -570,13 +692,11 @@
       }
    });
 
-
    // Make Client Payment
    $("#discount-price-btn").click(function (e) {
       e.preventDefault();
-      var form = $(this).closest(".update-form"); // Get the closest form element
-      const actionUrl = "{% url 'adjust_shopping_discount' %}"; // Get the URL for client payment
-      // Perform manual validation
+      var form = $(this).closest(".update-form");
+      const actionUrl = "{% url 'adjust_shopping_discount' %}";
       var isValid = true;
       form.find('input, select, textarea').each(function() {
          if ($(this).prop('required') && $(this).val() === '') {
@@ -585,84 +705,53 @@
       });
 
       if (isValid) {
-         form.attr('action', actionUrl); // Set the action attribute
-         form.submit(); // Submit the form
+         try {
+            var isValidValue = true;
+            const checkedRadio = document.querySelector('.option-radio:checked');
+            const discountPrice = document.getElementById('discount-price');
+            const value = parseFloat(discountPrice.value);
+            if (value >= 0 ) {
+               if (checkedRadio.value == 'percent') {
+                  if (value > 1 && value <= 100) {
+                     form.attr('action', actionUrl);
+                     form.submit();
+                  } else {
+                     alert("Le pourcentage doit être comprise entre >1% et 100%");
+                  }
+               } else if (checkedRadio.value == 'percent_small') {
+                  if (value > 0 && value <= 1) {
+                     form.attr('action', actionUrl);
+                     form.submit();
+                  } else {
+                     alert("Le pourcentage doit être comprise entre >0% et 1%");
+                  }
+               } else {
+                  form.attr('action', actionUrl);
+                  form.submit();
+               }
+            } else {
+               alert("La valeur doit être positif!");
+            }
+            
+         } catch (error) {
+            alert("Veuillez bien renseiner tous les champs.");
+         }
       } else {
-         // Optionally, show an alert or handle invalid form case
          alert("Veuillez renseiner tous les champs du formulaire.");
       }
    });
 
-
    document.addEventListener('DOMContentLoaded', function () {
-      // Get the select element by its ID
-      var clientSelect = document.getElementById('sale-client');
-      // Add an event listener for the 'change' event
-      clientSelect.addEventListener('change', function () {
-         // Get the selected client ID
-         var clientId = clientSelect.value;
-         // Check if a client is selected (i.e., clientId is not empty)
-         if (clientId && clientId != 'new_client' && clientId!='') {
-            loadClientDetails(clientId);
-         } else {
-            updateFields({}, clientId);
-         }
-      });
-   });
-
-   function loadClientDetails(clientId) {
-      // Load client details via AJAX
-      const fetchUrl = "{% url 'admin_clients_details' 0 %}".replace('/0/', `/${clientId}/`);
-      fetch(fetchUrl)
-         .then(response => response.json())
-         .then(data => {
-            updateFields(data.form, clientId)
-         })
-         .catch(error => {
-            console.error('Error:', error);
+         var clientSelect = document.getElementById('sale-client');
+         clientSelect.addEventListener('change', function () {
+            var clientId = clientSelect.value;
+            if (clientId && clientId != 'new_client' && clientId!='') {
+               loadClientDetails(clientId);
+            } else {
+               updateFields({}, clientId);
+            }
          });
-   }
-
-   function updateFields(data = {}, clientId){
-      var createUpdateUserBlock = document.getElementById('create-update-user-block');
-      var createUpdateUserLabel = document.getElementById('create-update-user-label');
-
-      if (clientId && clientId != 'new_client' && clientId!='') {
-         createUpdateUserBlock.style.display = 'block';
-         createUpdateUserLabel.textContent = 'Modifier les informations du client'
-      } else if(clientId == 'new_client') {
-         createUpdateUserBlock.style.display = 'block';
-         createUpdateUserLabel.textContent = 'Créer ce nouveau client'
-      } else {
-         createUpdateUserBlock.style.display = 'none';
-         createUpdateUserLabel.textContent = 'Créer ce nouveau client'
-      }
-
-
-      data = data??{};
-      const form = document.getElementById('clientForm');
-      form.querySelector('[name="client_first_name"]').value = data.first_name??'';
-      form.querySelector('[name="client_last_name"]').value = data.last_name??'';
-      form.querySelector('[name="client_company"]').value = data.company??'';
-      form.querySelector('[name="client_email"]').value = data.email??'';
-      form.querySelector('[name="client_phone_number"]').value = data.phone_number??'';
-      form.querySelector('[name="client_phone_number_other"]').value = data.phone_number_other??'';
-      form.querySelector('[name="client_country"]').value = data.country??'';
-      form.querySelector('[name="client_city"]').value = data.city??'';
-      form.querySelector('[name="client_address"]').value = data.address??'';
-   }
-
-function getDateTime(){
-   var now = new Date();
-   var year = now.getFullYear();
-   var month = ("0" + (now.getMonth() + 1)).slice(-2); // Add leading zero
-   var day = ("0" + now.getDate()).slice(-2); // Add leading zero
-   var hours = ("0" + now.getHours()).slice(-2); // Add leading zero
-   var minutes = ("0" + now.getMinutes()).slice(-2); // Add leading zero
-   var datetimeValue = year + "-" + month + "-" + day + "T" + hours + ":" + minutes;
-   // Set the datetime input value
-   return datetimeValue;
-}
+      });
 
 </script>
 

@@ -13,13 +13,13 @@
                {% csrf_token %}
                <div style="margin: 0px; padding: 0px;" class="navbar-nav align-items-center">
                   <div style="margin: px; padding: 0px;" class="nav-item d-flex align-items-center">
-                     <select style="font-weight: bold; margin-right: 2px;width: 200px;" name="category" id="category" class="form-select">
+                     <select style="font-weight: bold; margin-right: 2px;width: 120px;" name="category" id="category" class="form-select">
                         <option value="">Toutes les catégories</option>
                         {% for category in categories %}
                            <option value="{{ category.id }}" {% if selected_category_id == category.id %}selected{% endif %}>{{ category.name }}</option>
                         {% endfor %}
                      </select>
-                     <input name="search" value="{{ search }}" style="width: 300px; margin: 0px;" type="text" class="form-control border-1 shadow-none" placeholder="Search..." aria-label="Search..." />
+                     <input name="search" value="{{ search }}" style="width: 150px; margin: 0px;" type="text" class="form-control border-1 shadow-none" placeholder="Search..." aria-label="Search..." />
                      <button style="width: 50px; margin: 0px 0px 0px 5px;" type="submit" class="form-control border-1" ><i class="bx bx-search fs-4 lh-0"></i></button>
                   </div>
                </div>
@@ -31,9 +31,9 @@
          <div class="col-md-3 col-lg-2 col-6 mb-2">
             <div class="card h-100">
                <div class="card-body">
-                  <h5 style="padding: 0px; margin: 0px 0px 5px 0px;" class="card-title">{{ product.name }}</h5>
+                  <h5 style="padding: 0px; margin: 0px 0px 5px 0px;" class="card-title"><b>{{ product.name }}</b></h5>
                   {% if product.price %}
-                  <h6 style="padding: 0px; margin: 0px 0px 10px 0px;" class="lead font-weight-bold">{{ product.price|floatformat:0|separate_millier }} <small style="font-size: 10px;">{{ price_unit }}</small></h6>
+                  <h6 style="padding: 0px; margin: 0px 0px 5px 0px;" class="lead font-weight-bold">{{ product.price|floatformat:0|separate_millier }} <small style="font-size: 10px;">{{ price_unit }}</small></h6>
                   {% endif %}
 
                   <!-- {#% if request.user.is_superuser %#}
@@ -45,7 +45,11 @@
                      </small>
                   </div>
                   {#% endif %#} -->
-                  {% if  request.user|can_create_sale %}
+
+                  <div id="status-{{ product.id }}" data-product="{{ product.stock_status }}" style="visibility: hidden; padding: 0px 4px 0px 4px; margin: 0px 0px 5px 0px; font-size: 13px; height: 20px;" class="btn ">status</div>
+
+
+                  {% if  request.user|can_create_sale and product.isStockAvailable %}
                      <div>
                         <button style="padding: 1px 2.5px 1px 2.5px;font-size: 12px;" type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
                            data-bs-target="#addProductQuantityModal" data-id="{{ product.id }}" data-name="{{ product.name }}"
@@ -158,6 +162,49 @@
 {% block postloadjs %}
 
 <script>
+
+   {% if products|length > 0 %}
+      let statusObj;
+      let dataProduct;
+      let data;
+      {% for product in products %}
+         statusObj = document.getElementById('status-{{ product.id }}');
+         dataProduct = statusObj.getAttribute('data-product');
+         data = JSON.parse(dataProduct);
+
+         if (data.class == 'warning') {
+            setInterval(function() {
+               statusObj.innerHTML = `${data.status} (<b>${data.quantity}</b>)`;
+
+               if (statusObj.classList.contains('btn-warning')) {
+                  statusObj.style.visibility = 'hidden';
+                  statusObj.classList.remove('btn-warning');
+               } else {
+                  statusObj.classList.add('btn-warning');
+                  statusObj.style.visibility = 'visible';
+               }
+            }, 2000);
+
+         } else if (data.class == 'danger') {
+            statusObj.style.visibility = 'visible';
+            if (statusObj.classList.contains('btn-warning') || statusObj.classList.contains('btn-danger')) {
+               statusObj.classList.remove('btn-warning');
+               statusObj.classList.remove('btn-danger');
+            }
+            statusObj.classList.add('btn-danger');
+            statusObj.innerHTML = `${data.status} (<b>${data.quantity}</b>)`;
+            
+         } else {
+            statusObj.innerHTML = ``;
+            if (statusObj.classList.contains('btn-warning') || statusObj.classList.contains('btn-danger')) {
+               statusObj.classList.remove('btn-warning');
+               statusObj.classList.remove('btn-danger');
+            }
+            statusObj.style.visibility = 'hidden';
+         }
+      {% endfor %}
+   {% endif %}
+
 
    document.addEventListener('DOMContentLoaded', function () {
       const addProductModal = document.getElementById('addProductQuantityModal');

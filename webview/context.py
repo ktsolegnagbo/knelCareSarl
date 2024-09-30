@@ -1,4 +1,6 @@
 from django.shortcuts import get_object_or_404
+
+from webview.utils import givenRate, notEmpty
 from .models import AppSite, Country, Product, Employee, Role
 
 
@@ -8,6 +10,9 @@ def shopping_contents(request):
     product_count = 0
     shopping = request.session.get('shopping', {})
     discount = 0
+    discount_type = 'amount'
+    discount_amount = 0
+    
     
     if request.user.is_authenticated:
         try:
@@ -46,7 +51,7 @@ def shopping_contents(request):
         employee = {}
 
     for item_id, item_data in shopping.items():
-        if item_id != 'discount' and not item_id.endswith('_total'):
+        if item_id != 'discount' and item_id != 'discount_type' and not item_id.endswith('_total'):
             product = get_object_or_404(Product, pk=item_id)
             if isinstance(item_data, int):
                 totalHT += item_data * product.price
@@ -68,10 +73,12 @@ def shopping_contents(request):
         else:
             if item_id == 'discount':
                 discount = shopping['discount']
+            elif item_id == 'discount_type':
+                discount_type = shopping['discount_type']
         
-    
-    discount = float(discount) if discount else 0.0
     totalHT = float(totalHT)
+    discount = float(discount) if discount else 0.0
+    # discount_type = discount_type
     # taxRateBrut = (float(employee.country.tax) if employee.country and employee.country.tax is not None and employee.country.tax > 0 else 0.0)
     # taxRate = (taxRateBrut / 100) if taxRateBrut > 1 else taxRateBrut
     # tax = float(totalHT) * taxRate
@@ -80,14 +87,21 @@ def shopping_contents(request):
         app_site = AppSite.objects.get(site__id=1)
     except Exception:
         app_site = {}
-
+        
+        
+    if discount_type == 'percent' or discount_type == 'percent_small':
+        discount_amount = float(totalHT) * givenRate(discount) if notEmpty(discount) and discount > 0 else 0.0
+    else:
+        discount_amount = discount if discount and discount >= 0 else 0.0
 
     
     context = {
         'shopping_items': shopping_items,
         'discount': discount,
+        'discount_type': discount_type,
+        'discount_amount': discount_amount,
         'totalHT': totalHT,
-        'totalGlobalHT': totalHT - discount,
+        'totalGlobalHT': totalHT - discount_amount,
         'product_count': product_count,
         'price_unit': 'FCFA',
         'employee': employee,

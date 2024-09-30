@@ -6,3 +6,7 @@
 db.sqlite3
 documentation.txt
 /webview/zz_functions.py
+/webview/zz_views.py
+# /webview/migrations/*.py
+knelcare.service
+nginx.conf

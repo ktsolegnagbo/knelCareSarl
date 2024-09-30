@@ -1,3 +1,4 @@
+from datetime import date
 import json
 import uuid
 from PIL import Image
@@ -10,7 +11,6 @@ from webview.utils import notEmpty
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.contrib.sites.models import Site
-
 from django.db.models import Q
 
 default_user_icon="default-user-icon.png"
@@ -25,15 +25,28 @@ class AppSite(models.Model):
     phone_number_other = models.CharField(max_length=254, null=True, blank=True)
     address = models.TextField(null=True, blank=True)
     info = models.TextField(null=True, blank=True)
+    recip = models.TextField(null=True, blank=True)
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_app_site', null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    
+    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='updated_app_site', null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+
+    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='deleted_app_site', null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     deleted = models.BooleanField(default=False, null=False, blank=False)
 
     # Constants (No commas at the end)
-    NAME = 'KnelCare'
+    NAME = 'KNELCARE SARL'
     DOMAIN = 'knelcare.com'
-    EMAIL = 'knelcare@knelcare.com'
-    PHONE1 = '+228 92645651'
-    PHONE2 = '+228 98284737'
-    ADDRESS = '400 BP 351, Angle Rues Hôtel Léota et Hôtel de France, Quartier Lama, Kara'
+    EMAIL = 'info@knelcare.com'
+    OWNER_EMAIL = 'kenkou@knelcare.com'
+    PHONE1 = '+226 06946060'
+    PHONE2 = '+226 70080123'
+    RECIP = 'KNELCARE SARL IFU 00223282C 12BP:400 OUAGADOUGOU 12 RCCM : BF-OUA-01-2024-B13-01216'
+    ADDRESS = 'Quartier Karpala, derrière le Lycée Emergence Ouagadougou, Burkina Faso'
+    INFO = 'Distribution d\'Équipements, Réactifs et Consommables Médicaux'
 
     @property
     def name(self):
@@ -54,11 +67,15 @@ class Country(models.Model):
     id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=254, unique=True, null=False, blank=False)
     tax = models.DecimalField(max_digits=20, decimal_places=2, null=False, blank=False, default=Decimal('0'))
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_countries', null=True, blank=True)
-    # created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_countries', null=True, blank=True)
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='updated_countries', null=True, blank=True)
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_country', null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+
+    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='updated_country', null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='deleted_user_country', null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     deleted = models.BooleanField(default=False, null=False, blank=False)
     
     class Meta:
@@ -71,11 +88,15 @@ class Role(models.Model):
     id = models.CharField(max_length=100, primary_key=True, unique=True, null=False, blank=False)
     name = models.CharField(max_length=50, unique=True)
     description = models.TextField(null=True, blank=True)
+    
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_roles', null=True, blank=True)
-    # created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='updated_roles', null=True, blank=True)
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='updated_roles', null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+    
+    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='updated_roles', null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='deleted_role', null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     deleted = models.BooleanField(default=False, null=False, blank=False)
 
     def __str__(self):
@@ -84,8 +105,8 @@ class Role(models.Model):
 class Employee(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='user_employees')
-    salary_base = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
-    # country = models.ForeignKey(Country, null=True, blank=True, on_delete=models.SET_NULL)
+    salary_brut = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    position = models.CharField(max_length=100, default='')
     phone_number = models.CharField(unique=True, max_length=20, null=True, blank=True)
     employee_pic = models.ImageField(upload_to=users_pictures_path, null=True, blank=True)
     employee_pic_thumb = models.ImageField(upload_to=users_pictures_path_thumb, null=True, blank=True)
@@ -95,12 +116,15 @@ class Employee(models.Model):
     email_verified = models.BooleanField(default=False, blank=True)
     agree_privacy_policy = models.BooleanField(default=False, null=False, blank=False)
     roles = models.ManyToManyField(Role, related_name='roles_employees', blank=True, default='user')
-    # roles = models.CharField(max_length=255, null=True, blank=True, default='')
+
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_employees', null=True, blank=True)
-    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='updated_employees', null=True, blank=True)
-    # created_at = models.DateTimeField(auto_now_add=True)
     created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+    
+    updated_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='updated_employees', null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    deleted_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='deleted_employees', null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     deleted = models.BooleanField(default=False, null=False, blank=False)
     
     @property
@@ -119,10 +143,11 @@ class Employee(models.Model):
             'first_name': self.user.first_name if self.user else '',
             'last_name': self.user.last_name if self.user else '',
             'full_name': self.full_name,
-            'salary_base': float(self.salary_base),
+            'salary_brut': float(self.salary_brut),
             'email': self.user.email if self.user else '',
             # 'country': self.country.id if self.country else None,
             'roles': self.list_roles(),
+            'position': self.position,
             'phone_number': self.phone_number,
             'is_active': self.user.is_active,
             'biography': self.biography,
@@ -154,8 +179,6 @@ class Employee(models.Model):
         else:
             return f'{self.user.username}'
         
-
-
     @property
     def isAdmin(self):
         return self.has_role('admin')
@@ -198,6 +221,7 @@ class Employee(models.Model):
             if img_thumb.height > 50 or img_thumb.width > 50:
                 img_thumb = img_thumb.resize((50, 50), Image.LANCZOS)
             img_thumb.save(self.employee_pic_thumb.path)
+            
     def delete(self, *args, **kwargs):
         if self.employee_pic and not self.employee_pic.name.endswith(default_user_icon):
             if storage.exists(self.employee_pic.path):
@@ -234,13 +258,22 @@ class Payroll(models.Model):
     id = models.AutoField(primary_key=True)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
     date = models.DateField()
-    salary_base = models.DecimalField(max_digits=10, decimal_places=2)
+    salary_brut = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    cnss = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    irpp = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
+    other_deductions = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
     commission = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'))
-    deleted = models.BooleanField(default=False, null=False, blank=False)
-    created_by = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='payrolls')
-    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_payrolls', null=True, blank=True)
+    salary_net = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0'), editable=False)
+    
+    created_by = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='user_payrolls')
     created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+    
+    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_payrolls', null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    deleted_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='deleted_payrolls', null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted = models.BooleanField(default=False, null=False, blank=False)
     
     @property
     def toMap(self):
@@ -252,38 +285,45 @@ class Payroll(models.Model):
             'last_name': self.employee.user.last_name if self.employee and self.employee.user else '',
             'full_name': self.employee.full_name,
             'date': self.date.strftime('%Y-%m-%d') if self.date else None,
-            'salary_base': float(self.salary_base),
+            'salary_brut': float(self.salary_brut),
+            'cnss': float(self.cnss),
+            'irpp': float(self.irpp),
+            'other_deductions': float(self.other_deductions),
+            'salary_net': float(self.salary_net),
             'commission': float(self.commission) if self.commission and self.commission > 0 else 0.0,
         }
         
         return json.dumps(mapData)
+
+    def save(self, *args, **kwargs):
+        self.salary_net = (self.salary_brut + self.commission) - (self.cnss + self.irpp + self.other_deductions)
+        super().save(*args, **kwargs)
     
-    
-    @property
-    def total_salary(self):
-        return float(self.salary_base) + float(self.commission)
-    
+
     def __str__(self):
         return f"Paie de {self.employee} pour {self.date.strftime('%B %Y')}"
 
 class Client(models.Model):
     id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='clients')
     first_name = models.CharField(max_length=255, null=False, blank=False)
     last_name = models.CharField(max_length=255, null=False, blank=False)
     email = models.EmailField(unique=True, null=False, blank=False)
     phone_number = models.CharField(unique=True, max_length=20, null=False, blank=False)
     phone_number_other = models.CharField(max_length=20, null=True, blank=True)
     address = models.TextField(null=True, blank=True)
-    # country = models.ForeignKey(Country, null=True, blank=True, on_delete=models.SET_NULL)
     country = models.CharField(max_length=50, null=True, blank=True)
     city = models.CharField(max_length=50, null=True, blank=True)
     company = models.CharField(max_length=50, null=True, blank=True)
     loyalty_point = models.IntegerField(default=0)
-    # created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_clients', null=True, blank=True)
-    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_clients', null=True, blank=True)
+   
+    user = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='clients')
     created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+    
+    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_clients', null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    deleted_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='deleted_clients', null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     deleted = models.BooleanField(default=False, null=False, blank=False)
     
     @property
@@ -312,13 +352,17 @@ class Client(models.Model):
 
 class Category(models.Model):
     id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='categories')
     name = models.CharField(max_length=254)
     description = models.TextField(null=True, blank=True)
-    # created_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='created_categories', null=True, blank=True)
-    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_categories', null=True, blank=True)
+    
+    user = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='categories')
     created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+    
+    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_categories', null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    deleted_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='deleted_categories', null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     deleted = models.BooleanField(default=False, null=False, blank=False)
     
     @property
@@ -337,20 +381,25 @@ class Category(models.Model):
 
 class Product(models.Model):
     id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='user_products')
     category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.SET_NULL)
     # stock = models.PositiveIntegerField(default=0)
+    alert_threshold = models.PositiveIntegerField(null=False, blank=False, default=0)
     name = models.CharField(max_length=254, null=False)
     description = models.TextField()
     price = models.DecimalField(max_digits=20, decimal_places=2, null=False)
     is_available = models.BooleanField(default=True)
     image_url = models.URLField(max_length=1024, null=True, blank=True)
     image = models.ImageField(upload_to=products_pictures_path, null=True, blank=True, default=f"images/{no_image_available}")
-    # created_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='created_products', null=True, blank=True)
-    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_products', null=True, blank=True)
+    user = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='user_products')
     created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+    
+    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_products', null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    deleted_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='deleted_products', null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     deleted = models.BooleanField(default=False, null=False, blank=False)
+    
     
     @property
     def toMap(self):
@@ -361,6 +410,7 @@ class Product(models.Model):
             'description': self.description,
             'price': float(self.price),
             'is_available': self.is_available,
+            'alert_threshold': self.alert_threshold,
             'image_url': self.image_url,
             'image': self.image.url if self.image else None,
             'imageUrl': self.imageUrl,
@@ -370,21 +420,28 @@ class Product(models.Model):
     def utils(self):
         sales = SaleItem.objects.filter(product=self, deleted=False)
         stocks = Stock.objects.filter(product=self, deleted=False)
+        expireds = ExpiredStock.objects.filter(product=self, deleted=False)
+        
         
         salesQties = sum(sale.quantity for sale in sales) if sales and len(sales) > 0 else 0
         stockQties = sum(stock.quantity for stock in stocks) if stocks and len(stocks) > 0 else 0
+        expiredQties = sum(expired.quantity for expired in expireds) if expireds and len(expireds) > 0 else 0
         
         salesAmounts = sum(sale.amount for sale in sales) if sales and len(sales) > 0 else Decimal('0')
         stockAmounts = sum(stock.amount for stock in stocks) if stocks and len(stocks) > 0 else Decimal('0')
 
         return {
-            'available_stock': stockQties - salesQties,
+            'available_stock': stockQties - (salesQties + expiredQties),
             'profit': salesAmounts - stockAmounts
         }
    
     @property
     def isAvailable(self):
-        return 'Disponible' if self.is_available else 'Indisponible'
+        return {'status': 'Disponible', 'ok': True} if self.is_available else {'status': 'Indisponible', 'ok': False}
+        
+    @property
+    def isStockAvailable(self):
+        return self.available_stock > 0
         
     @property
     def imageUrl(self):
@@ -398,26 +455,100 @@ class Product(models.Model):
             return self.image.url
         # return f'{ settings.MEDIA_URL }images/{no_image_available}'
         return f'images/{no_image_available}'
+        
+    @property
+    def stocks_quantities(self):
+        stocks = Stock.objects.filter(product=self, deleted=False)
+        stocksQty = sum(s.quantity for s in stocks) if stocks and len(stocks) > 0 else 0
+        return stocksQty
     
+    @property
+    def sales_quantities(self):
+        sales = SaleItem.objects.filter(product=self, deleted=False)
+        salesQty = sum(s.quantity for s in sales) if sales and len(sales) > 0 else 0
+        return salesQty
+    
+    @property
+    def expired_quantities(self):
+        expireds = ExpiredStock.objects.filter(product=self, deleted=False)
+        expiredQty = sum(e.quantity for e in expireds) if expireds and len(expireds) > 0 else 0
+        return expiredQty
+    
+    @property
+    def available_stock(self):
+        """Retourne Le Stock Disponible"""
+        quantities = self.stocks_quantities - (self.sales_quantities + self.expired_quantities)
+        return quantities
+    
+    @property
+    def stock_status(self):
+        """Vérifie si le produit nécessite un réapprovisionnement."""
+        if self.available_stock <= 0:
+            status =  {'quantity': self.available_stock, 'status': 'Stock Vide', 'class': 'danger'}
+        elif self.available_stock < self.alert_threshold:
+            status = {'quantity': self.available_stock, 'status': 'Faible Stock', 'class': 'warning'}
+        else :
+            status = {'quantity': self.available_stock, 'status': 'Stock OK', 'class': 'success'}
+        
+        return json.dumps(status)
+    
+    @property
+    def stock_available(self):
+        """Vérifie si le produit nécessite un réapprovisionnement."""
+        if self.available_stock <= 0:
+            status =  {'quantity': self.available_stock, 'status': 'Stock Vide', 'class': 'danger'}
+        elif self.available_stock < self.alert_threshold:
+            status = {'quantity': self.available_stock, 'status': 'Faible Stock', 'class': 'warning'}
+        else :
+            status = {'quantity': self.available_stock, 'status': 'Stock OK', 'class': 'success'}
+        
+        return status
+
+    @property
+    def get_most_recent_expiration_date(self) -> (date | None):
+        # result = Stock.objects.filter(product=product).aggregate(most_recent_date=Max('expiration_date')) 
+        # return result['most_recent_date']
+        result = Stock.objects.filter(product=self, deleted=False).order_by('-expiration_date').first()
+        return result.expiration_date if result else None
+
+    @property
+    def is_expired(self):
+        """Check if any of the associated quantities are expired."""
+        if self.get_most_recent_expiration_date:
+            return self.get_most_recent_expiration_date < timezone.now().date()
+        return False 
+        
+        return any(quantity.is_expired() for quantity in self.quantities.all())
+
     def __str__(self):
         return self.name
 
 class Stock(models.Model):
     id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='user_stocks')
     product = models.ForeignKey(Product, on_delete=models.CASCADE, null=False, blank=False, related_name='product_stocks')
     quantity = models.PositiveIntegerField(null=False, blank=False, default=0)
     price = models.DecimalField(max_digits=20, decimal_places=2, null=False, blank=False)
     amount = models.DecimalField(max_digits=20, decimal_places=2, null=False, blank=False, editable=False)
-    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='updated_stocks')
+    expiration_date = models.DateField(null=True, blank=True)
+    user = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='user_stocks')
     created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+    
+    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='updated_stocks')
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    deleted_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='deleted_stocks', null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     deleted = models.BooleanField(default=False, null=False, blank=False)
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.quantity and self.price:
             self.amount = Decimal(self.quantity) * self.price
+    
+    # @property
+    # def is_expired(self):
+    #     """Check if the quantity is expired."""
+    #     return self.expiration_date and self.expiration_date < timezone.now().date()
     
     @property
     def toMap(self):
@@ -426,9 +557,9 @@ class Stock(models.Model):
             'product': self.product.id if self.product else None,
             'quantity': self.quantity,
             'price': float(self.price),
+            'expiration_date': self.expiration_date.strftime('%Y-%m-%d') if self.expiration_date else None,
         })
        
-
     def save(self, *args, **kwargs):
         """
         Override the save method to calculate and set the total amount based on
@@ -444,36 +575,83 @@ class Stock(models.Model):
         return f"{self.product.name} - {self.quantity} x {self.price}"
 
 class Sale(models.Model):
+    # id = models.AutoField(primary_key=True)
     id = models.CharField(max_length=100, primary_key=True, unique=True, null=False, blank=False)
-    user = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='user_sales')
+    order_number = models.PositiveIntegerField(unique=True, null=True, blank=True)
+    # order_number = models.PositiveIntegerField(null=True, blank=True, default=0)
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='client_sales')
     discount = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     tax_rate = models.DecimalField(max_digits=20, decimal_places=2, default=0, editable=False)
     ht_amount = models.DecimalField(max_digits=20, decimal_places=2, default=0)
     date = models.DateTimeField(default=timezone.now, null=False, blank=False)
     payment_due_date = models.DateTimeField(default=timezone.now, null=False, blank=False)
-    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_sales', null=True, blank=True)
+    
+    user = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='user_sales')
     created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
+    
+    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_sales', null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    deleted_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='deleted_sales', null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     deleted = models.BooleanField(default=False, null=False, blank=False)
     # payment_date = models.DateTimeField(default=timezone.now, null=False, blank=False)
     # commission_rate = models.DecimalField(max_digits=5, decimal_places=2, help_text="Commission en pourcentage")
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not self.id:
-            self.id = self._generate_order_number()
+        if not self.id or self.id is None:
+            self.id = self._generate_sale_number()
+            
+        # if not self.order_number or self.order_number is None:
+        #     self.order_number = self._generate_order_number()
  
-    def _generate_order_number(self):
+    def _generate_sale_number(self):
         """
         Generate a unique order number using user ID, client ID, and a UUID for randomness.
         """
         return f'{self.user.id}-{self.client.id}-{uuid.uuid4().hex[:8]}'
+    
 
+    def _generate_order_number(self):
+        """
+        Generate a unique sequential order number.
+        """
+        last_sale = Sale.objects.order_by('-order_number').first()
+        last_order_number = int(last_sale.order_number) if last_sale and last_sale.order_number is not None else 0
+        new_order_number = last_order_number + 1
+        return new_order_number
+        
+    
+    @property
+    def invoice_number(self):
+        if self.order_number and self.order_number > 0:
+            if self.order_number < 10:
+                return f'00{self.order_number}'
+            elif self.order_number >= 10 and self.order_number < 100:
+                return f'0{self.order_number}'
+            else:
+                return str(self.order_number)
+        else:
+            return self.generated_invoice_number
+        
+    @property
+    def generated_invoice_number(self):
+        order_number = self._generate_order_number()
+        if order_number < 10:
+            return f'00{order_number}'
+        elif order_number >= 10 and order_number < 100:
+            return f'0{order_number}'
+        else:
+            return str(order_number)
+        
+    
     @property
     def toMap(self):
         return {
             'id': self.id,
+            'invoice_number': self.invoice_number,
+            'order_number': self.order_number,
             'user': self.user,
             'client': self.client,
             'discount': self.discount,
@@ -511,6 +689,13 @@ class Sale(models.Model):
         
     @property
     def payments(self):
+        """
+        Retrieve the items for this sale from the SaleItem table.
+        """
+        return Payment.objects.filter(sale=self, deleted=False) if self.id else []
+    
+    @property
+    def quantities(self):
         """
         Retrieve the items for this sale from the SaleItem table.
         """
@@ -580,9 +765,13 @@ class Sale(models.Model):
         """
         Override the save method to ensure id and totals are set properly.
         """
-        if not self.id:
-            self.id = self._generate_order_number()
-        super().save(*args, **kwargs)
+        if not self.id or self.id is None:
+            self.id = self._generate_sale_number()
+            
+        if not self.order_number or self.order_number is None:
+            self.order_number = self._generate_order_number()
+            
+        super(Sale, self).save(*args, **kwargs)
 
     def __str__(self):
         return f"Vente {self.id} par {self.user} pour {self.client}"
@@ -595,6 +784,15 @@ class SaleItem(models.Model):
     price = models.DecimalField(max_digits=20, decimal_places=2)
     amount = models.DecimalField(max_digits=20, decimal_places=2, default=0, editable=False)
     observation = models.TextField(blank=True, null=False)
+    
+    user = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, related_name='user_sale_items')
+    created_at = models.DateTimeField(default=timezone.now)
+    
+    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_sale_items', null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    deleted_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='deleted_sale_items', null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     deleted = models.BooleanField(default=False, null=False, blank=False)
     
     def __init__(self, *args, **kwargs):
@@ -607,7 +805,6 @@ class SaleItem(models.Model):
 class Payment(models.Model):
     id = models.AutoField(primary_key=True)
     sale = models.ForeignKey(Sale, on_delete=models.CASCADE, related_name='sale_payments')
-    user = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='user_payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
     date = models.DateTimeField(default=timezone.now)
     method_choices = [
@@ -622,15 +819,56 @@ class Payment(models.Model):
         ('unpaid', 'Non Payé')
     ]
     status = models.CharField(max_length=20, choices=payment_status_choices, null=False, blank=False, default='unpaid')
-    # created_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='created_payments', null=True, blank=True)
-    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_payments', null=True, blank=True)
+    
+    user = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='user_payments')
     created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+    
+    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_payments', null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+    
+    deleted_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='deleted_payments', null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
     deleted = models.BooleanField(default=False, null=False, blank=False)
     
     def __str__(self):
         return f"Payment of {self.amount} for Sale {self.sale.id}"
 
+
+class ExpiredStock(models.Model):
+    id = models.AutoField(primary_key=True)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, null=False, blank=False, related_name='product_expired_stock')
+    quantity = models.PositiveIntegerField(null=False, blank=False, default=0)
+    expiration_date = models.DateField(null=False, blank=False, default=timezone.now)
+    
+    user = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='user_expired_stock', null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    
+    updated_at = models.DateTimeField(null=True, blank=True)
+    updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_expired_stock', null=True, blank=True)
+    
+    deleted_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='deleted_expired_stock', null=True, blank=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted = models.BooleanField(default=False, null=False, blank=False)
+    
+    @property
+    def toMap(self):
+        mapData = {
+            'id': self.id,
+            'product': self.product.id if self.product else None,
+            'quantity': self.quantity,
+            'expiration_date': self.expiration_date.strftime('%Y-%m-%d') if self.expiration_date else None,
+        }
+        
+        return json.dumps(mapData)
+
+    class Meta:
+        unique_together = ('product', 'expiration_date')  # Enforce unique product-expiration pair
+        verbose_name_plural = 'Expired Stocks'
+    
+    def __str__(self):
+        return f"{self.quantity.quantity} de {self.product.name} expiré le {self.expiration_date}"
+    
+    
 # class LoyaltyHistory(models.Model):
 #     id = models.AutoField(primary_key=True)
 #     client = models.ForeignKey(Client, on_delete=models.CASCADE)
@@ -642,7 +880,9 @@ class Payment(models.Model):
 #     # created_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='created_loyalty_histories', null=True, blank=True)
 #     updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_loyalty_histories', null=True, blank=True)
 #     created_at = models.DateTimeField(default=timezone.now)
-#     updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+#     updated_at = models.DateTimeField(null=True, blank=True)
+#     deleted_by = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='updated_products', null=True, blank=True)
+#     deleted_at = models.DateTimeField(null=True, blank=True)
 #     deleted = models.BooleanField(default=False, null=False, blank=False)
     
 #     class Meta:
@@ -657,7 +897,7 @@ class Payment(models.Model):
 #     created_by = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)
 #     updated_by = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True)
 #     created_at = models.DateTimeField(default=timezone.now)
-#     updated_at = models.DateTimeField(auto_now=True, null=False, blank=False)
+#     updated_at = models.DateTimeField(null=True, blank=True)
 
 #     def __str__(self):
 #         return self.name

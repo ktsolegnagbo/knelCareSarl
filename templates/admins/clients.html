@@ -63,6 +63,7 @@
               <th colspan="9">Liste des clients</th>
             </tr>
             <tr>
+              <th data-exclude="true" style="color: white;">Actions</th>
               <th style="color: white;">Nom & Prénoms</th>
               <th style="color: white;">Addresse Email</th>
               <th style="color: white;">Téléphone</th>
@@ -71,20 +72,11 @@
               <th style="color: white;">Pays</th>
               <th style="color: white;">Ville</th>
               <th style="color: white;">Entreprise</th>
-              <th data-exclude="true" style="color: white;">Actions</th>
             </tr>
           </thead>
           <tbody class="table-border-bottom-0">
             {% for client in clients %} 
             <tr>
-              <td>{% if client.full_name %}<strong>{{ client.full_name }}</strong>{% endif %}</td>
-              <td>{% if client.email %}<strong>{{ client.email }}</strong>{% endif %}</td>
-              <td>{% if client.phone_number %}{{ client.phone_number }}{% endif %}</td>
-              <td>{% if client.phone_number_other %} {{ client.phone_number_other }}{% endif %}</td>
-              <td>{% if client.address %}{{ client.address }}{% endif %}</td>
-              <td>{% if client.country %}{{ client.country }}{% endif %}</td>
-              <td>{% if client.city %}{{ client.city }}{% endif %}</td>
-              <td>{% if client.company %}{{ client.company }}{% endif %}</td>
               <td data-exclude="true">
                 {% if  request.user|can_update_client or request.user|can_delete_client %}
                 <div class="dropdown">
@@ -106,6 +98,14 @@
                 </div>
                 {% endif %}
               </td>
+              <td>{% if client.full_name %}<strong>{{ client.full_name }}</strong>{% endif %}</td>
+              <td>{% if client.email %}<strong>{{ client.email }}</strong>{% endif %}</td>
+              <td>{% if client.phone_number %}{{ client.phone_number }}{% endif %}</td>
+              <td>{% if client.phone_number_other %} {{ client.phone_number_other }}{% endif %}</td>
+              <td>{% if client.address %}{{ client.address }}{% endif %}</td>
+              <td>{% if client.country %}{{ client.country }}{% endif %}</td>
+              <td>{% if client.city %}{{ client.city }}{% endif %}</td>
+              <td>{% if client.company %}{{ client.company }}{% endif %}</td>
             </tr>
 
             {% endfor %}

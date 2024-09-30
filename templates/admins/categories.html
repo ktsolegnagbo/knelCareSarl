@@ -47,19 +47,15 @@
           </tr>
 
           <tr>
+            <th data-exclude="true" style="color: white;">Actions</th>
             <th style="color: white;">ID catégorie</th>
             <th style="color: white;">Nom de la catégorie</th>
             <th style="color: white;">Description</th>
-            <th data-exclude="true" style="color: white;">Actions</th>
           </tr>
         </thead>
         <tbody class="table-border-bottom-0">
           {% for category in categories %} 
             <tr>
-                <td><strong>{{ category.id }}</strong></td>
-                <td><strong>{{ category.name }}</strong></td>
-                <td><strong>{{ category.description }}</strong></td>
-                
                 <td data-exclude="true">
                   {% if  request.user|can_update_category or request.user|can_delete_category %}
                     <div class="dropdown">
@@ -82,6 +78,9 @@
                     </div>
                   {% endif %}
                 </td>
+                <td><strong>{{ category.id }}</strong></td>
+                <td><strong>{{ category.name }}</strong></td>
+                <td><strong>{{ category.description }}</strong></td>
             </tr>
           {% endfor %}
         </tbody>

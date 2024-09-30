@@ -1,4 +1,3 @@
-from .views import GroupListView, GroupCreateView, GroupUpdateView, GroupDeleteView
 from django.urls import path
 
 from . import views
@@ -34,6 +33,11 @@ urlpatterns = [
     path('admin-stocks/update/<int:stock_id>/', views.admin_stocks, name='admin_update_stock'),
     path('admin-stocks/delete/<int:stock_id>/', views.admin_stocks, name='admin_delete_stock'),
     
+    path('admin-expired-stocks/', views.admin_expired_stocks, name='admin_list_expired_stocks'),
+    path('admin-expired-stocks/create/', views.admin_expired_stocks, name='admin_create_expired_stock'),
+    path('admin-expired-stocks/update/<int:expired_stock_id>/', views.admin_expired_stocks, name='admin_update_expired_stock'),
+    path('admin-expired-stocks/delete/<int:expired_stock_id>/', views.admin_expired_stocks, name='admin_delete_expired_stock'),
+    
     path('admin-categories/', views.admin_categories, name='admin_list_categories'),
     path('admin-categories/create/', views.admin_categories, name='admin_create_category'),
     path('admin-categories/update/<int:category_id>/', views.admin_categories, name='admin_update_category'),
@@ -56,22 +60,12 @@ urlpatterns = [
     path('admin-sales/delete/item/<sale_id>/', views.admin_sales, name='admin_delete_sale_item'),
     path('admin-sales/delete/payment/<sale_id>/', views.admin_sales, name='admin_delete_sale_payment'),
     
-    path('admin-payrolls/generate/', views.generate_payroll, name='generate_payroll'),
-    path('admin-payrolls/report/', views.payroll_report, name='payroll_report'),
-
     path('shopping/', views.view_shopping, name='view_shopping'),
     path('shopping/add/<item_id>/', views.add_to_shopping, name='add_to_shopping'),
     path('shopping/adjust/<item_id>/', views.adjust_shopping_quantity, name='adjust_shopping_quantity'),
     path('shopping/adjust_shopping_discount/', views.adjust_shopping_discount, name='adjust_shopping_discount'),
     path('shopping/remove/<item_id>/', views.remove_shopping_item, name='remove_item'),
      
-    # path('clients/', views.all_clients, name='clients'),
-    # path('clients/<int:client_id>/', views.client_detail, name='client_detail'),
-    # path('clients/add/', views.add_client, name='add_client'),
-    # path('clients/edit/<int:client_id>/', views.edit_client, name='edit_client'),
-    # path('clients/delete/<int:client_id>/', views.delete_client, name='delete_client'),
-    # path('clients/details/<int:client_id>/', views.get_client_details, name='get_client_details'),
- 
     path('sales/make_payment/', views.make_client_sale, name='make_payment'),
     path('sales/payment/success/<sale_id>/', views.sale_success, name='sale_success'),
     path('sale/print/<str:sale_id>/', views.print_sale, name='print_sale'),
@@ -84,56 +78,11 @@ urlpatterns = [
     path('sales-dashboard/', views.sale_dashboard, name='sale_dashboard'),
     path('user-permissions/<user_id>/', views.user_permissions, name='user_permissions'),
     
-    path('groups/', GroupListView.as_view(), name='group-list'),
-    path('groups/create/', GroupCreateView.as_view(), name='group-create'),
-    path('groups/<int:pk>/update/', GroupUpdateView.as_view(), name='group-update'),
-    path('groups/<int:pk>/delete/', GroupDeleteView.as_view(), name='group-delete'),
+    # path('groups/', GroupListView.as_view(), name='group-list'),
+    # path('groups/create/', GroupCreateView.as_view(), name='group-create'),
+    # path('groups/<int:pk>/update/', GroupUpdateView.as_view(), name='group-update'),
+    # path('groups/<int:pk>/delete/', GroupDeleteView.as_view(), name='group-delete'),
     
-    
-    
-    
-     
-    # path('sale/wh/', webhook, name='webhook'),
-    
-    
-    
-   
-    # # Lister toutes les factures
-    # path('sales/', views.list_create_or_update_sale, name='sale_list'),
-    # # Détails d'une facture spécifique
-    # path('sale/<int:sale_id>/', views.sale_detail, name='sale_detail'),
-    # # Créer une nouvelle facture
-    # path('sale/create/', views.sale_create, name='sale_create'),
-    # # Mettre à jour une facture existante
-    # path('sale/<int:sale_id>/update/', views.sale_update, name='sale_update'),
-    # # Supprimer une facture
-    # path('sale/<int:sale_id>/delete/', views.sale_delete, name='sale_delete'),
-    # # Imprimer la facture en PDF
-    # path('sale/<int:sale_id>/print/', views.print_sale, name='print_sale'),
-
-    
-    
-    
-    # path('register/', RegisterView.as_view(), name='register'),
-    # path('logout/', CustomLogoutView.as_view(), name='logout'),
-    # path('employee/update/', EmployeeUpdateView.as_view(), name='employee_update'),
-    # path('password_reset/', CustomPasswordResetView.as_view(), name='password_reset'),
-    # path('password_reset_confirm/<uidb64>/<token>/', CustomPasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-    # path('resend_activation_email/', ResendActivationEmailView.as_view(), name='resend_activation_email'),
-    
-    # Optional Additional Authentication Views
-    # path('password_reset_done/', auth_views.PasswordResetDoneView.as_view(template_name='accounts/password_reset_done.html'), name='password_reset_done'),
-    # path('password_reset_complete/', auth_views.PasswordResetCompleteView.as_view(template_name='accounts/password_reset_complete.html'), name='password_reset_complete'),
-    
-    # # Optional Password Change URL
-    # path('password_change/', auth_views.PasswordChangeView.as_view(template_name='accounts/password_change.html'), name='password_change'),
-    # path('password_change_done/', auth_views.PasswordChangeDoneView.as_view(template_name='accounts/password_change_done.html'), name='password_change_done'),
-    
-    # Optional Account Deletion View
-    # Uncomment and implement this if you want to allow users to delete their accounts
-    # path('delete_account/', DeleteAccountView.as_view(), name='delete_account'),
-
-
 ]
 
 

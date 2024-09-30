@@ -74,6 +74,7 @@
                 <th colspan="15">Liste des Ventes</th>
               </tr>
               <tr>
+                <th data-exclude="true" style="color: white;">Actions</th>
                 <th style="color: white;">Status paiement</th>
                 <th style="color: white;">Nom & Prénoms</th>
                 <th style="color: white;">Remise <span style="font-size: 10px;">( {{ price_unit }} )</span></th>
@@ -91,35 +92,12 @@
                 <th style="color: white;">Entreprise</th>
                 <th style="color: white;">Date vente</th>
                 <!-- <th style="color: white;">Entreprise de vente</th> -->
-                <th data-exclude="true" style="color: white;">Actions</th>
               </tr>
             </thead>
 
             <tbody class="table-border-bottom-0">
               {% for sale in sales %} 
               <tr>
-                <td>
-                  {% if sale.status and sale.status.id %}
-                  <!-- 'id': 'paid', 'name': 'Payé', 'class': 'success' -->
-                  <span class="badge bg-label-{{ sale.status.class }} me-1">{{ sale.status.name }}</span>
-                  {% endif %}
-                </td>
-                <td>{% if sale.client.full_name %}<strong>{{ sale.client.full_name }}</strong>{% endif %}</td>
-                <td>{% if sale.discount %}{{ sale.discount|floatformat:0|separate_millier:"" }}{% endif %}</td>
-                <td>{% if sale.tax_amount %}{{ sale.tax_amount|floatformat:0|separate_millier:"" }}{% endif %}</td>
-                <td>{% if sale.ht_amount %}{{ sale.ht_amount|floatformat:0|separate_millier:"" }}{% endif %}</td>
-                <td>{% if sale.ttc_amount %}{{ sale.ttc_amount|floatformat:0|separate_millier:"" }}{% endif %}</td>
-                <td>{% if sale.payments_amount %}{{ sale.payments_amount|floatformat:0|separate_millier:"" }}{% endif %}</td>
-
-                <td>{% if sale.client.email %}{{ sale.client.email }}{% endif %}</td>
-                <td>{% if sale.client.phone_number %}{{ sale.client.phone_number }}{% endif %}</td>
-                <td>{% if sale.client.phone_number_other %}{{ sale.client.phone_number_other }}{% endif %}</td>
-                <td>{% if sale.client.address %}{{ sale.client.address }}{% endif %}</td>
-                <td>{% if sale.client.country %}{{ sale.client.country }}{% endif %}</td>
-                <td>{% if sale.client.city %}{{ sale.client.city }}{% endif %}</td>
-                <td>{% if sale.client.company %}{{ sale.client.company }}{% endif %}</td>
-                <td>{% if sale.date %}{{ sale.date }}{% endif %}</td>
-                <!-- <td>{% if sale.country and sale.country.name %}sale.country.name{% endif %}</td> -->
 
                 <td data-exclude="true">
                   {% if  request.user|can_create_payment or request.user|can_make_print or request.user|can_view_sale or request.user|can_delete_sale %}
@@ -168,6 +146,31 @@
                     </div>
                   {% endif %}
                 </td>
+
+                <td>
+                  {% if sale.status and sale.status.id %}
+                  <!-- 'id': 'paid', 'name': 'Payé', 'class': 'success' -->
+                  <span class="badge bg-label-{{ sale.status.class }} me-1">{{ sale.status.name }}</span>
+                  {% endif %}
+                </td>
+                <td>{% if sale.client.full_name %}<strong>{{ sale.client.full_name }}</strong>{% endif %}</td>
+                <td>{% if sale.discount %}{{ sale.discount|floatformat:0|separate_millier:"" }}{% endif %}</td>
+                <td>{% if sale.tax_amount %}{{ sale.tax_amount|floatformat:0|separate_millier:"" }}{% endif %}</td>
+                <td>{% if sale.ht_amount %}{{ sale.ht_amount|floatformat:0|separate_millier:"" }}{% endif %}</td>
+                <td>{% if sale.ttc_amount %}{{ sale.ttc_amount|floatformat:0|separate_millier:"" }}{% endif %}</td>
+                <td>{% if sale.payments_amount %}{{ sale.payments_amount|floatformat:0|separate_millier:"" }}{% endif %}</td>
+
+                <td>{% if sale.client.email %}{{ sale.client.email }}{% endif %}</td>
+                <td>{% if sale.client.phone_number %}{{ sale.client.phone_number }}{% endif %}</td>
+                <td>{% if sale.client.phone_number_other %}{{ sale.client.phone_number_other }}{% endif %}</td>
+                <td>{% if sale.client.address %}{{ sale.client.address }}{% endif %}</td>
+                <td>{% if sale.client.country %}{{ sale.client.country }}{% endif %}</td>
+                <td>{% if sale.client.city %}{{ sale.client.city }}{% endif %}</td>
+                <td>{% if sale.client.company %}{{ sale.client.company }}{% endif %}</td>
+                <td>{% if sale.date %}{{ sale.date }}{% endif %}</td>
+                <!-- <td>{% if sale.country and sale.country.name %}sale.country.name{% endif %}</td> -->
+
+                
               </tr>
             {% endfor %}
 

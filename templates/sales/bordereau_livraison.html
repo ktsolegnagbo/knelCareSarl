@@ -110,7 +110,7 @@
             <img src="data:image/png;base64,{{ base64_string }}" alt="KnelCare" class="company-logo" />
         </div>
         
-        <h3>Bon de Livraison N°: <strong>#{{ sale.id }}</strong></h3>
+        <h3>Bon de Livraison N°: <strong>{{ sale.invoice_number }}</strong></h3>
         <p>Date: <strong>{{ date }}</strong></p>
     </div>
 
@@ -185,10 +185,9 @@
     </div> -->
 
     <div class="footer">
-        <p style="padding: 0px; margin: 3px;">Merci pour votre confiance et votre achat chez {{ app_site.name }} !</p>
-        <p style="padding: 0px; margin: 3px;">{{ app_site.domain }} | {{ app_site.email }} | {{ app_site.phone_number }}{% if app_site.phone_number_other %} | {{ app_site.phone_number_other }}{% endif %}</p>
-        <p style="padding: 0px; margin: 3px;">{% if app_site.address %} {{ app_site.address }}{% endif %}</p>
-        
+        <p style="padding: 0px; margin: 3px;">Merci pour votre confiance et votre achat chez {{ app_site.name }} ({{ app_site.domain }}) !</p>
+        {% if app_site.recip %}<p style="padding: 0px; margin: 3px;">{{ app_site.recip }}</p>{% endif %}
+        {% if app_site.info %}<p style="padding: 0px; margin: 3px;">{{ app_site.info }}</p>{% endif %}
     </div>
 
     <script>
