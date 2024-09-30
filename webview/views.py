@@ -37,7 +37,8 @@ PERMISSION_GROUP_TRANSLATIONS = {
     'stock': 'Stocks de produits', 
     'sale': 'Ventes de produits', 
     'saleitem': 'Item Article vendu', 
-    'payment': 'Payement du Client'
+    'payment': 'Payement du Client',
+    'expiredstock': 'Quantité Stock Périmé'
 }
 
 
@@ -97,10 +98,10 @@ PERMISSION_TRANSLATIONS = {
     'Can delete stock': 'Peut supprimer un stock', #delete_stock
     'Can view stock': 'Peut voir un stock', #view_stock
     
-    'Can add expired stock': 'Peut ajouter un stock périmé', #add_expired_stock
-    'Can change expired stock': 'Peut modifier un stock périmé', #change_expired_stock
-    'Can delete expired stock': 'Peut supprimer un stock périmé', #delete_expired_stock
-    'Can view expired stock': 'Peut voir un stock périmé', #view_expired_stock
+    'Can add expired stock': 'Peut ajouter un stock périmé', #add_expiredstock
+    'Can change expired stock': 'Peut modifier un stock périmé', #change_expiredstock
+    'Can delete expired stock': 'Peut supprimer un stock périmé', #delete_expiredstock
+    'Can view expired stock': 'Peut voir un stock périmé', #view_expiredstock
 }
 
 unAutorizedMsg = 'Vous ne disposez pas de droit suffisant, contacter l\'administrateur'
@@ -902,7 +903,7 @@ def admin_users(request, user_id=None):
     
     # permissions = Permission.objects.all()
     
-    models = [Country, Role, Employee, Payroll, Client, Category, Product, Stock, Sale, SaleItem, Payment]
+    models = [Country, Role, Employee, Payroll, Client, Category, Product, Stock, ExpiredStock, Sale, SaleItem, Payment]
     content_types = [ContentType.objects.get_for_model(model) for model in models]
     permissions = Permission.objects.filter(content_type__in=content_types)
     
@@ -916,7 +917,7 @@ def admin_users(request, user_id=None):
             'name': translated_permission_name,
             'codename': permission.codename
         })
-        print(model_name)
+        # print(translated_permission_name)
     grouped_permissions = dict(grouped_permissions)
 
     return render(request, 'admins/employees.html', {
@@ -1174,10 +1175,10 @@ def admin_stocks(request, stock_id=None):
 @login_required
 def admin_expired_stocks(request, expired_stock_id=None):
     """ Add a expired stock to the store """
-    create_permission = 'add_expired_stock'
-    update_permission = 'change_expired_stock'
-    delete_permission = 'delete_expired_stock'
-    view_permission = 'view_expired_stock'
+    create_permission = 'add_expiredstock'
+    update_permission = 'change_expiredstock'
+    delete_permission = 'delete_expiredstock'
+    view_permission = 'view_expiredstock'
     
     if not has_perm(request.user, view_permission):
         #raise PermissionDenied
